@@ -23,8 +23,19 @@ interface BaseSonarrBody {
   "applicationUrl": string
 }
 
-async function _callAPI(req: {}) {
-  
+const API = process.env.SONARR_API_URL;
+const API_KEY = process.env.SONARR_API_KEY;
+
+
+function _callAPI(route: string, req?: RequestInit) {
+  return fetch(API + route, {
+    ...req,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': API_KEY,
+      ...req?.headers
+    },
+  });
 }
 
 export default function (body: BaseSonarrBody) {
