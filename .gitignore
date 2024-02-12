@@ -116,7 +116,6 @@ web_modules/
 out
 
 # Nuxt.js build / generate output
-
 .nuxt
 dist
 
