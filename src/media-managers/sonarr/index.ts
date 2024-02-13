@@ -111,6 +111,10 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
     return this.processEpisodeChanged(body);
   }
   protected processDelete(body: WebhookEpisodeDeletePayload) {
+    if (body.deleteReason === 'upgrade') {
+      this.logger.info(`Episode ${body.episodes[0].title} is being upgraded`);
+      return true;
+    }
     return this.processEpisodeChanged(body);
   }
   protected processSeriesAdd(body: WebhookSeriesAddPayload) {
