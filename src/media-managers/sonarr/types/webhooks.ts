@@ -100,11 +100,11 @@ export interface WebhookGrabbedRelease {
 }
 
 export enum DeleteMediaFileReason {
-  missingFromDisk,
-  manual,
-  upgrade,
-  noLinkedEpisodes,
-  manualOverride
+  missingFromDisk = "missingFromDisk",
+  manual = "manual",
+  upgrade = "upgrade",
+  noLinkedEpisodes = "noLinkedEpisodes",
+  manualOverride = "manualOverride"
 }
 
 export interface WebhookRenamedEpisodeFile extends WebhookEpisodeFile {
