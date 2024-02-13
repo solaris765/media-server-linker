@@ -172,12 +172,5 @@ dist
 
 # Finder (MacOS) folder config
 .DS_Store
-sonarrDB/000029.ldb
-sonarrDB/000031.ldb
-sonarrDB/000032.log
-sonarrDB/CURRENT
-sonarrDB/LOCK
-sonarrDB/LOG
-sonarrDB/LOG.old
-sonarrDB/MANIFEST-000030
+sonarrDB/*
 log.txt

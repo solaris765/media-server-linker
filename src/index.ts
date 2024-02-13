@@ -1,6 +1,7 @@
 import fs from 'fs';
 import fastify from 'fastify';
 import { mediaManagers } from './media-managers';
+import curlString from 'curl-string';
 
 const app = fastify({ logger: true });
 
@@ -17,7 +18,11 @@ for (const manager of mediaManagers) {
     });
 
     // Log equivalent curl command to log
-    fs.appendFile('log.txt', `curl -X POST -H "Content-Type: application/json" -d '${JSON.stringify(request.body)}' http://localhost:3000/${manager.name}`, (err) => {
+    fs.appendFile('log.txt', curlString(`${request.protocol}://${request.hostname}${request.url}`,{
+      method: 'POST',
+      headers: request.headers,
+      body: request.body as any
+    },{ colorJson: false, jsonIndentWidth: 2}), (err) => {
       if (err) {
         request.log.error('Error writing to log file');
       }
