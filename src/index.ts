@@ -22,7 +22,7 @@ for (const manager of mediaManagers) {
       method: 'POST',
       headers: request.headers,
       body: request.body as any
-    },{ colorJson: false, jsonIndentWidth: 2}), (err) => {
+    },{ colorJson: false, jsonIndentWidth: 2}) + '\n\n', (err) => {
       if (err) {
         request.log.error('Error writing to log file');
       }
