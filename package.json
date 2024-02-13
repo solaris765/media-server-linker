@@ -2,6 +2,10 @@
   "name": "media-srv-linker",
   "module": "src/index.ts",
   "type": "module",
+  "scripts": {
+    "build": "bun build",
+    "start": "bun src/index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
@@ -9,6 +13,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "fastify": "^4.26.0"
+    "@types/pouchdb": "^6.4.2",
+    "fastify": "^4.26.0",
+    "pouchdb": "^8.0.1"
   }
 }

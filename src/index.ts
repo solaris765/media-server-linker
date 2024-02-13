@@ -1,3 +1,4 @@
+import fs from 'fs';
 import fastify from 'fastify';
 import { mediaManagers } from './media-managers';
 
@@ -11,12 +12,24 @@ app.get('/', async (request, reply) => {
 
 for (const manager of mediaManagers) {
   app.post(`/${manager.name}`, async (request, reply) => {
-    const result = await manager.manager(request.body);
+    const handler = new manager.handler({
+      logger: request.log
+    });
+
+    // Log equivalent curl command to log
+    fs.writeFile('log.txt', `curl -X POST -H "Content-Type: application/json" -d '${JSON.stringify(request.body)}' http://localhost:3000/${manager.name}`, (err) => {
+      if (err) {
+        request.log.error('Error writing to log file');
+      }
+    }
+    );
+
+    const result = await handler.processWebhook(request.body);
+
     request.log.info(JSON.stringify(result));
     reply.send();
   });
 }
-
 
 let PORT = 3000;
 try {
