@@ -17,7 +17,7 @@ for (const manager of mediaManagers) {
     });
 
     // Log equivalent curl command to log
-    fs.writeFile('log.txt', `curl -X POST -H "Content-Type: application/json" -d '${JSON.stringify(request.body)}' http://localhost:3000/${manager.name}`, (err) => {
+    fs.appendFile('log.txt', `curl -X POST -H "Content-Type: application/json" -d '${JSON.stringify(request.body)}' http://localhost:3000/${manager.name}`, (err) => {
       if (err) {
         request.log.error('Error writing to log file');
       }
