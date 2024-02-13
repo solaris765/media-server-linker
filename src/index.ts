@@ -10,7 +10,6 @@ app.get('/', async (request, reply) => {
   reply.send({ hello: 'world' });
 });
 
-
 for (const manager of mediaManagers) {
   app.post(`/${manager.name}`, async (request, reply) => {
     const handler = new manager.handler({
@@ -18,16 +17,24 @@ for (const manager of mediaManagers) {
     });
 
     // Log equivalent curl command to log
-    fs.appendFile('log.txt', curlString(`${request.protocol}://${request.hostname}${request.url}`,{
-      method: 'POST',
-      headers: request.headers,
-      body: request.body as any
-    },{ colorJson: false, jsonIndentWidth: 2}) + '\n\n', (err) => {
-      if (err) {
-        request.log.error('Error writing to log file');
-      }
+    if (request.headers['is-copy'] !== 'true') {
+      let [curl, data] = curlString(`${request.protocol}://${request.hostname}${request.url}`, {
+        method: 'POST',
+        headers: {
+          accept: request.headers.accept,
+          'content-type': request.headers['content-type'],
+          'is-copy': 'true'
+        },
+        body: request.body as any
+      }, { colorJson: false, jsonIndentWidth: 0 }).split('--data', 2);
+      data = data.replaceAll('\n', '')
+
+      fs.appendFile('log.txt', curl + '--data' + data + '\n\n', (err) => {
+        if (err) {
+          request.log.error('Error writing to log file');
+        }
+      });
     }
-    );
 
     const result = await handler.processWebhook(request.body);
 
