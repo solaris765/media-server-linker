@@ -4,19 +4,21 @@
   "type": "module",
   "scripts": {
     "build": "bun build",
-    "dev": "bun run --watch src/index.ts | bunx pino-pretty",
+    "dev": "bun run --watch src/index.ts",
     "start": "bun src/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "mock-fs": "^5.2.0",
+    "@types/pouchdb": "^6.4.2"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "@types/pouchdb": "^6.4.2",
     "curl-string": "^3.1.0",
     "fastify": "^4.26.0",
+    
     "pouchdb": "^8.0.1"
   }
 }
