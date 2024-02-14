@@ -55,28 +55,20 @@ function isManualInteractionEvent(eventPayload: WebhookPayload): eventPayload is
 }
 
 class SonarrHandler extends MediaManager<WebhookPayload> {
-  private async _callAPI<T>(route: string,
-    req?: RequestInit): Promise<TypedResponse<T>> {
+  private async _callAPI<T>(route: string, req?: RequestInit): Promise<TypedResponse<T>> {
+    let init = {
+      ...req,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Api-Key': API_KEY,
+        ...req?.headers
+      },
+    }
     saveCurlToFile({
       url: `${API}/api/v3${route}`,
-      init: {
-        ...req,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': API_KEY,
-          ...req?.headers,
-        },
-      }
-    } as any, 'sonarr.log');
-    let res = await fetch(`${API}/api/v3${route}`,
-      {
-        ...req,
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Api-Key': API_KEY,
-          ...req?.headers
-        },
-      });
+      init: init as any,
+    }, 'sonarr-api.log');
+    let res = await fetch(`${API}/api/v3${route}`, init);
 
     return res as TypedResponse<T>
   }

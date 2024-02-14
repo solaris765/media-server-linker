@@ -21,15 +21,29 @@ interface curler {
   url: string,
   init: Options
 }
-export function saveCurlToFile(curl: string | curler, filename: string) {
-  let str;
-  if (typeof curl === 'string') {
-    str = curl;
-  } else {
-    str = makeCurl(curl.url, curl.init);
-  }
 
-  const p = path.resolve(import.meta.dir, '../../', filename)
+const DONT_LOG_HEADERS = [
+  'content-length',
+  'user-agent',
+]
+export function saveCurlToFile(curl: curler, filename: string) {
+  if ((curl.init.headers as { [key: string]: string })['is-copy'] === 'true') {
+    return;
+  } else {
+    (curl.init.headers as { [key: string]: string })['is-copy'] = 'true';
+  }
+  for (const key in curl.init.headers) {
+    if (DONT_LOG_HEADERS.includes(key.toLowerCase())) {
+      delete curl.init.headers[key];
+    }
+  }
+  let str = makeCurl(curl.url, curl.init);
+
+  let p = path.resolve(import.meta.dir, '../../logs/')
+  if (!fs.existsSync(p)) {
+    fs.mkdirSync(p);
+  }
+  p = path.resolve(p, filename);
   if (!fs.existsSync(p)) {
     fs.writeFileSync(p, '');
   }

@@ -2,6 +2,7 @@ import fs from 'fs';
 import fastify from 'fastify';
 import { mediaManagers } from './media-managers';
 import curlString from 'curl-string';
+import { saveCurlToFile } from './util/curl';
 
 const app = fastify({ logger: true });
 
@@ -17,21 +18,15 @@ for (const manager of mediaManagers) {
     });
 
     // Log equivalent curl command to log
-    if (request.headers['is-copy'] !== 'true') {
-      const curl = curlString(request.url, {
+    saveCurlToFile({
+      url: `${request.protocol}://${request.hostname}${request.url}`,
+      init: {
         method: request.method,
-        headers: {
-          'content-type': request.headers['content-type'],
-          accept: request.headers.accept
-        }
-      });
+        headers: request.headers,
+        body: request.body as any
+      }
+    }, `${manager.name}-webhook.log`);
 
-      fs.appendFile('log.txt', curl + '\n\n', (err) => {
-        if (err) {
-          request.log.error('Error writing to log file');
-        }
-      });
-    }
 
     const result = await handler.processWebhook(request.body);
 
