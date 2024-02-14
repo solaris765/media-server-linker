@@ -34,7 +34,7 @@ export function saveCurlToFile(curl: curler, filename: string) {
   }
   for (const key in curl.init.headers) {
     if (DONT_LOG_HEADERS.includes(key.toLowerCase())) {
-      delete curl.init.headers[key];
+      delete (curl.init.headers as { [key: string]: string })[key];
     }
   }
   let str = makeCurl(curl.url, curl.init);
