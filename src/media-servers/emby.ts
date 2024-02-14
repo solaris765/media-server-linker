@@ -58,6 +58,10 @@ export default class EmbyMediaServer extends MediaServer {
 
     // if the entry doesn't exist, go ahead and create it
     if (!dbEntry) {
+      if (!realPath) {
+        this.logger.error(`Neither realPath nor savedLinkPath exist for ${episodeResource.id}`);
+        return true;
+      }
       dbEntry = DBEntry.fromDoc({
         _id: episodeResource.id.toString(),
         realPath,
@@ -74,6 +78,10 @@ export default class EmbyMediaServer extends MediaServer {
 
     // if the linkFile doesn't exist
     if (!savedLinkPath) {
+      if (!realPath) {
+        this.logger.error(`Neither realPath nor savedLinkPath exist for ${episodeResource.id}`);
+        return true;
+      }
       this.logger.info(`Creating link for ${linkPath}`);
       await createSymLink(realPath, linkPath);
       dbEntry.mediaServers[this.mediaServerPath] = linkPath;
