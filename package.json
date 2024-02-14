@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "bun build",
-    "dev": "bun run --watch src/index.ts",
+    "dev": "bun run --watch src/index.ts | bunx pino-pretty",
     "start": "bun src/index.ts"
   },
   "devDependencies": {
