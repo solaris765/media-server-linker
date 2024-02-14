@@ -1,14 +1,15 @@
 import pouchdb from "pouchdb";
 import { MediaManager, type TypedResponse } from "../../types";
-import type { DBEntry } from "../../util/filesystem";
+import type { DBEntryLike } from "../../util/filesystem";
 import {
   type EpisodeResource,
   type SeriesResource,
 } from "./types/api"
 import { type WebhookPayload, type WebhookTestPayload, WebhookEventType, type WebhookGrabPayload, type WebhookImportPayload, type WebhookRenamePayload, type WebhookSeriesAddPayload, type WebhookSeriesDeletePayload, type WebhookEpisodeDeletePayload, type WebhookHealthPayload, type WebhookApplicationUpdatePayload, type WebhookManualInteractionPayload, type WebhookEpisodeChangePayload } from "./types/webhooks";
 import { saveCurlToFile } from "../../util/curl";
+import { linkEpisodeToLibrary } from "../../media-servers";
 
-export const sonarrDB = new pouchdb<DBEntry>('sonarrDB');
+export const sonarrDB = new pouchdb<DBEntryLike>('sonarrDB');
 
 
 const API = (process.env.SONARR_BASE_URL as string).replace(/\/$/, '');
@@ -105,6 +106,7 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
     for (const episode of body.episodes) {
       const episodeResource = await this.getEpisode(episode.id);
       this.logger.info(`Processing episode: ${episodeResource.title}`);
+      await linkEpisodeToLibrary(episodeResource, this.logger);
     }
 
     return true;
