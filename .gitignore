@@ -174,3 +174,4 @@ dist
 .DS_Store
 sonarrDB/*
 log.txt
+sonarr.log

@@ -18,18 +18,15 @@ for (const manager of mediaManagers) {
 
     // Log equivalent curl command to log
     if (request.headers['is-copy'] !== 'true') {
-      let [curl, data] = curlString(`${request.protocol}://${request.hostname}${request.url}`, {
-        method: 'POST',
+      const curl = curlString(request.url, {
+        method: request.method,
         headers: {
-          accept: request.headers.accept,
           'content-type': request.headers['content-type'],
-          'is-copy': 'true'
-        },
-        body: request.body as any
-      }, { colorJson: false, jsonIndentWidth: 0 }).split('--data', 2);
-      data = data.replaceAll('\n', '')
+          accept: request.headers.accept
+        }
+      });
 
-      fs.appendFile('log.txt', curl + '--data' + data + '\n\n', (err) => {
+      fs.appendFile('log.txt', curl + '\n\n', (err) => {
         if (err) {
           request.log.error('Error writing to log file');
         }

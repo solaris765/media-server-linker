@@ -6,11 +6,12 @@ import {
   type SeriesResource,
 } from "./types/api"
 import { type WebhookPayload, type WebhookTestPayload, WebhookEventType, type WebhookGrabPayload, type WebhookImportPayload, type WebhookRenamePayload, type WebhookSeriesAddPayload, type WebhookSeriesDeletePayload, type WebhookEpisodeDeletePayload, type WebhookHealthPayload, type WebhookApplicationUpdatePayload, type WebhookManualInteractionPayload, type WebhookEpisodeChangePayload } from "./types/webhooks";
+import { saveCurlToFile } from "../../util/curl";
 
 export const sonarrDB = new pouchdb<DBEntry>('sonarrDB');
 
 
-const API = process.env.SONARR_BASE_URL as string;
+const API = (process.env.SONARR_BASE_URL as string).replace(/\/$/, '');
 const API_KEY = process.env.SONARR_API_KEY as string;
 
 function isTestEvent(eventPayload: WebhookPayload): eventPayload is WebhookTestPayload {
@@ -54,17 +55,30 @@ function isManualInteractionEvent(eventPayload: WebhookPayload): eventPayload is
 }
 
 class SonarrHandler extends MediaManager<WebhookPayload> {
-  private _callAPI<T>(route: string,
+  private async _callAPI<T>(route: string,
     req?: RequestInit): Promise<TypedResponse<T>> {
-    return fetch(`${API}/api/v3/${route}`,
-    {
-      ...req,
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': API_KEY,
-        ...req?.headers
-      },
-    }) as Promise<TypedResponse<T>>;
+    saveCurlToFile({
+      url: `${API}/api/v3${route}`,
+      init: {
+        ...req,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': API_KEY,
+          ...req?.headers,
+        },
+      }
+    } as any, 'sonarr.log');
+    let res = await fetch(`${API}/api/v3${route}`,
+      {
+        ...req,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Api-Key': API_KEY,
+          ...req?.headers
+        },
+      });
+
+    return res as TypedResponse<T>
   }
 
   /**
@@ -75,22 +89,22 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
    */
   async getSeries(seriesId?: number,
     options?: Record<string,
-    string>) {
+      string>) {
     const query = new URLSearchParams(options).toString();
     const response = await this._callAPI<SeriesResource[]>(`/series/${seriesId}${query ? '?' + query : ''}`,
-    {
-      method: 'GET',
-    });
+      {
+        method: 'GET',
+      });
 
     return await response.json();
   }
 
-  async getEpisode(episodeId: number): Promise<EpisodeResource>{
+  async getEpisode(episodeId: number): Promise<EpisodeResource> {
     const response = await this._callAPI(
       `/episode/${episodeId}`,
-    {
-      method: 'GET',
-    });
+      {
+        method: 'GET',
+      });
 
     return await response.json();
   }
