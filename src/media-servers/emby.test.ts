@@ -1,5 +1,4 @@
 import { expect, mock, describe, beforeEach, it } from "bun:test";
-// import mockFs from 'mock-fs';
 import { default as EmbyMediaServer } from '/home/mason/repos/media-srv-linker/src/media-servers/emby';
 
 const mockCreateSymLink = mock();
@@ -42,7 +41,7 @@ describe('EmbyMediaServer', () => {
           path: MOCKED_REAL_FILE_PATH,
         },
       };
-      const result = embyMediaServer.libraryDir(episode);
+      const result = embyMediaServer.libraryDir(episode as any);
       expect(result).toBe('tv');
     });
 
@@ -52,7 +51,7 @@ describe('EmbyMediaServer', () => {
           path: '',
         },
       };
-      const result = embyMediaServer.libraryDir(episode);
+      const result = embyMediaServer.libraryDir(episode as any);
       expect(result).toBe('');
     });
   });
@@ -64,7 +63,7 @@ describe('EmbyMediaServer', () => {
         year: 1994,
         imdbId: 'tt0108778',
       };
-      const result = embyMediaServer.seriesFolderName(series);
+      const result = embyMediaServer.seriesFolderName(series as any);
       expect(result).toBe('Friends (1994) [imdbid-tt0108778]');
     });
   });
@@ -85,7 +84,7 @@ describe('EmbyMediaServer', () => {
         absoluteEpisodeNumber: 1,
         title: 'The One Where Monica Gets a Roommate',
       };
-      const result = embyMediaServer.episodeFileName(seriesTitle, episode);
+      const result = embyMediaServer.episodeFileName(seriesTitle, episode as any);
       expect(result).toBe('Friends - S1E1 - The One Where Monica Gets a Roommate');
     });
   });
@@ -105,7 +104,7 @@ describe('EmbyMediaServer', () => {
           path: MOCKED_REAL_FILE_PATH,
         },
       };
-      const result = embyMediaServer.mediaServerPathForEpisode(series, episode);
+      const result = embyMediaServer.mediaServerPathForEpisode(series as any, episode as any);
       expect(result).toBe('/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends - S1E1 - The One Where Monica Gets a Roommate.mp4');
     });
   });
@@ -127,7 +126,7 @@ describe('EmbyMediaServer', () => {
         },
         hasFile: true,
       };
-      await embyMediaServer.linkEpisodeToLibrary(episode);
+      await embyMediaServer.linkEpisodeToLibrary(episode as any);
       expect(mockPouchDBGet).toHaveBeenCalledWith('1');
       expect(mockPouchDBPut).toHaveBeenCalledWith({
         _id: '1',
@@ -155,7 +154,7 @@ describe('EmbyMediaServer', () => {
         },
         hasFile: true,
       };
-      await embyMediaServer.linkEpisodeToLibrary(episode);
+      await embyMediaServer.linkEpisodeToLibrary(episode as any);
       expect(mockPouchDBGet).toHaveBeenCalledWith('1');
       expect(mockCreateSymLink).toHaveBeenCalledWith(MOCKED_REAL_FILE_PATH, '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends - S1E1 - The One Where Monica Gets a Roommate.mp4');
     });
@@ -183,7 +182,7 @@ describe('EmbyMediaServer', () => {
         },
         hasFile: false,
       };
-      await embyMediaServer.linkEpisodeToLibrary(episode);
+      await embyMediaServer.linkEpisodeToLibrary(episode as any);
       expect(mockPouchDBGet).toHaveBeenCalledWith('1');
       expect(mockPouchDBPut).toHaveBeenCalledWith({
         _id: '1',
@@ -210,7 +209,7 @@ describe('EmbyMediaServer', () => {
         hasFile: false,
       };
 
-      await embyMediaServer.linkEpisodeToLibrary(episode);
+      await embyMediaServer.linkEpisodeToLibrary(episode as any);
       expect(mockPouchDBGet).toHaveBeenCalledWith('1');
       expect(mockPouchDBPut).toHaveBeenCalledTimes(0);
       console.log(mockCreateSymLink.mock.calls);
@@ -241,7 +240,7 @@ describe('EmbyMediaServer', () => {
         },
         hasFile: true,
       };
-      await embyMediaServer.linkEpisodeToLibrary(episode);
+      await embyMediaServer.linkEpisodeToLibrary(episode as any);
       expect(mockPouchDBGet).toHaveBeenCalledWith('1');
       expect(mockPouchDBPut).toHaveBeenCalledTimes(0);
       expect(mockCreateSymLink).toHaveBeenCalledTimes(0);
