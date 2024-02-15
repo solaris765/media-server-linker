@@ -44,7 +44,11 @@ async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
   let mediaServers: MediaServer[] = [];
   
   if (mediaServerModules.length === 0) {
-    const files = (await fs.readdir(import.meta.dir)).filter((file) => file.endsWith('.ts') && file !== 'index.ts');
+    const files = (await fs.readdir(import.meta.dir)).filter((file) => 
+      file.endsWith('.ts') && 
+      file !== 'index.ts' &&
+      !file.endsWith('test.ts')
+      );
     for (const file of files) {
       const module = await import(`./${file}`);
       if (!module.default) {
