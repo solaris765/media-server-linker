@@ -9,9 +9,7 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/mock-fs": "^4.13.4",
-    "@types/pouchdb": "^6.4.2",
-    "mock-fs": "^5.2.0"
+    "@types/pouchdb": "^6.4.2"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
