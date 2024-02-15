@@ -1,9 +1,6 @@
 import { MediaServer } from ".";
 import type { EpisodeResource, SeriesResource } from "../media-managers/sonarr/types/api";
-import { DBEntry, createSymLink, type DBEntryLike } from "../util/filesystem";
-import fs from "fs/promises";
-
-import {sonarrDB as db} from "../media-managers/sonarr";
+import { DBEntry } from "../util/filesystem";
 
 export default class EmbyMediaServer extends MediaServer {
   mediaServerPath: string = 'emby2';
@@ -27,7 +24,6 @@ export default class EmbyMediaServer extends MediaServer {
 
   episodeFileName(seriesTitle: string, episode: EpisodeResource) {
     return `${seriesTitle} - S${episode.seasonNumber}E${episode.absoluteEpisodeNumber} - ${episode.title}`;
-
   }
 
   mediaServerPathForEpisode(series: SeriesResource, episode: EpisodeResource) {
@@ -49,9 +45,9 @@ export default class EmbyMediaServer extends MediaServer {
       realPath = episodeResource.episodeFile.path!;
     }
 
-    let dbEntry = null;
+    let dbEntry: DBEntry | null = null;
     try {
-      dbEntry = DBEntry.fromDoc(await db.get<DBEntryLike>(episodeResource.id.toString()));
+      dbEntry = DBEntry.fromDoc(await this.db.get(episodeResource.id.toString()));
     } catch (e) {
       this.logger.info(`No entry found for ${episodeResource.id}`);
     }
@@ -69,8 +65,8 @@ export default class EmbyMediaServer extends MediaServer {
           [this.mediaServerPath]: linkPath,
         }
       });
-      await createSymLink(realPath, linkPath);
-      await db.put(dbEntry.toDoc());
+      await this.fileSystem.createSymLink(realPath, linkPath);
+      await this.db.put(dbEntry.toDoc());
       return true;
     }
 
@@ -83,28 +79,29 @@ export default class EmbyMediaServer extends MediaServer {
         return true;
       }
       this.logger.info(`Creating link for ${linkPath}`);
-      await createSymLink(realPath, linkPath);
+      await this.fileSystem.createSymLink(realPath, linkPath);
       dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-      await db.put(dbEntry.toDoc());
+      await this.db.put(dbEntry.toDoc());
       return true;
     }
 
     // if realPath doesn't exist, remove the link
-    if (!await fs.access(realPath).catch(() => false)) {
+    if (!await this.fileSystem.doesFileExist(realPath)) {
       this.logger.info(`Removing link for ${linkPath}`);
-      await fs.unlink(savedLinkPath);
+      await this.fileSystem.removeLink(savedLinkPath);
+      dbEntry.realPath = '';
       delete dbEntry.mediaServers[this.mediaServerPath];
-      await db.put(dbEntry.toDoc());
+      await this.db.put(dbEntry.toDoc());
       return true;
     }
 
     // if the the linkPath doesn't match the dbEntry, fix it
     if (linkPath !== savedLinkPath) {
       this.logger.info(`Fixing link for ${linkPath}`);
-      await fs.unlink(savedLinkPath);
-      await createSymLink(realPath, linkPath);
+      await this.fileSystem.removeLink(savedLinkPath);
+      await this.fileSystem.createSymLink(realPath, linkPath);
       dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-      await db.put(dbEntry.toDoc());
+      await this.db.put(dbEntry.toDoc());
       return true;
     }
 

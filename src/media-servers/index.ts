@@ -1,10 +1,20 @@
-import type { EpisodeResource, SeriesResource } from "../media-managers/sonarr/types/api";
-import type { WebhookEpisodeChangePayload } from "../media-managers/sonarr/types/webhooks";
+import type { EpisodeResource } from "../media-managers/sonarr/types/api";
 import type { Logger } from "../types";
 import fs from "fs/promises";
+import type { DBEntryLike } from "../util/filesystem";
+import {sonarrDB as db} from "../media-managers/sonarr";
+import { createSymLink, doesFileExist, removeLink } from "../util/filesystem";
 
+interface MinFSImplementation {
+  createSymLink: (target: string, linkPath: string) => Promise<void>;
+  doesFileExist: (path: string) => Promise<boolean>;
+  removeLink: (linkPath: string) => Promise<void>;
+}
+type MinDBImplementation = Pick<PouchDB.Database<DBEntryLike>, 'get' | 'put'>;
 export interface MediaServerOptions {
   logger: Logger;
+  db?: MinDBImplementation;
+  fileSystem?: MinFSImplementation
 }
 export abstract class MediaServer {
   protected logger: Logger;
@@ -12,8 +22,13 @@ export abstract class MediaServer {
   protected mediaSourceDir = process.env.MEDIA_SOURCE_DIR || 'data';
   abstract mediaServerPath: string;
 
+  protected db: MinDBImplementation;
+  protected fileSystem: MinFSImplementation
+
   constructor(options: MediaServerOptions) {
     this.logger = options.logger;
+    this.db = options.db || db;
+    this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
   }
 
   abstract linkEpisodeToLibrary(episode: EpisodeResource): Promise<boolean> | boolean;
