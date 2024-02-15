@@ -51,3 +51,11 @@ export async function createSymLink(source: string, destination: string): Promis
 
   return fs.link(source, destination);
 }
+
+export function doesFileExist(path: string): Promise<boolean> {
+  return fs.access(path).then(() => true).catch(() => false);
+}
+
+export function removeLink(linkPath: string): Promise<void> {
+  return fs.unlink(linkPath);
+}
