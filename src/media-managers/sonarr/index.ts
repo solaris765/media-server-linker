@@ -11,7 +11,6 @@ import { linkEpisodeToLibrary } from "../../media-servers";
 
 export const sonarrDB = new pouchdb<DBEntryLike>('sonarrDB');
 
-
 const API = (process.env.SONARR_BASE_URL as string).replace(/\/$/, '');
 const API_KEY = process.env.SONARR_API_KEY as string;
 
