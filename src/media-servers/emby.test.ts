@@ -84,13 +84,14 @@ describe('EmbyMediaServer', () => {
         absoluteEpisodeNumber: 111,
         episodeNumber: 1,
         episodeFile: {
-          customFormats: [{ name: 'Custom' }],
+          CustomFormatFormats: [{ name: 'CustomFormat' }],
           quality: {
             quality: {
-              name: 'Quality',
-              resolution: '1080p',
+              name: 'HDTV-720p',
             },
-            revision: 'Rev',
+            revision: {
+              version: 1
+            },
           },
           releaseGroup: 'RlsGrp',
         },
@@ -105,7 +106,7 @@ describe('EmbyMediaServer', () => {
         title: 'The One Where Monica Gets a Roommate',
       };
       const result = embyMediaServer.episodeFileName({ title: seriesTitle, year: 1994 } as any, episode as any);
-      expect(result).toBe('Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp');
+      expect(result).toBe('Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp');
     });
 
     it('should return the correct episode file name for an anime series', () => {
@@ -115,13 +116,14 @@ describe('EmbyMediaServer', () => {
         absoluteEpisodeNumber: 111,
         episodeNumber: 1,
         episodeFile: {
-          customFormats: [{ name: 'Custom' }],
+          CustomFormatFormats: [{ name: 'CustomFormat' }],
           quality: {
             quality: {
-              name: 'Quality',
-              resolution: '1080p',
+              name: 'HDTV-720p',
             },
-            revision: 'Rev',
+            revision: {
+              version: 1
+            },
           },
           releaseGroup: 'RlsGrp',
         },
@@ -136,7 +138,7 @@ describe('EmbyMediaServer', () => {
         title: 'The One Where Monica Gets a Roommate',
       };
       const result = embyMediaServer.episodeFileName({ title: seriesTitle, year: 1994, seriesType: 'anime' } as any, episode as any);
-      expect(result).toBe('Friends (1994) - S01E01 - 111 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][8bit][H.264][AAC 2.0 5.1][EN]-RlsGrp');
+      expect(result).toBe('Friends (1994) - S01E01 - 111 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][8bit][H.264][AAC 2.0 5.1][EN]-RlsGrp');
     });
 
   });
@@ -154,13 +156,14 @@ describe('EmbyMediaServer', () => {
         episodeNumber: 1,
         episodeFile: {
           path: MOCKED_REAL_FILE_PATH,
-          customFormats: [{ name: 'Custom' }],
+          CustomFormatFormats: [{ name: 'CustomFormat' }],
           quality: {
             quality: {
-              name: 'Quality',
-              resolution: '1080p',
+              name: 'HDTV-720p',
             },
-            revision: 'Rev',
+            revision: {
+              version: 1
+            },
           },
           releaseGroup: 'RlsGrp',
         },
@@ -175,7 +178,7 @@ describe('EmbyMediaServer', () => {
         title: 'The One Where Monica Gets a Roommate',
       };
       const result = embyMediaServer.mediaServerPathForEpisode(series as any, episode as any);
-      expect(result).toBe('/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
+      expect(result).toBe('/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
     });
   });
 
@@ -194,13 +197,14 @@ describe('EmbyMediaServer', () => {
         title: 'The One Where Monica Gets a Roommate',
         episodeFile: {
           path: MOCKED_REAL_FILE_PATH,
-          customFormats: [{ name: 'Custom' }],
+          CustomFormatFormats: [{ name: 'CustomFormat' }],
           quality: {
             quality: {
-              name: 'Quality',
-              resolution: '1080p',
+              name: 'HDTV-720p',
             },
-            revision: 'Rev',
+            revision: {
+              version: 1
+            },
           },
           releaseGroup: 'RlsGrp',
         },
@@ -220,10 +224,10 @@ describe('EmbyMediaServer', () => {
         _id: '1',
         realPath: MOCKED_REAL_FILE_PATH,
         mediaServers: {
-          emby2: '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
+          emby2: '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
         },
       });
-      expect(mockCreateSymLink).toHaveBeenCalledWith(MOCKED_REAL_FILE_PATH, '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
+      expect(mockCreateSymLink).toHaveBeenCalledWith(MOCKED_REAL_FILE_PATH, '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
     });
 
     it('should update the symlink for an existing episode if the real path has changed', async () => {
@@ -240,13 +244,14 @@ describe('EmbyMediaServer', () => {
         title: 'The One Where Monica Gets a Roommate',
         episodeFile: {
           path: MOCKED_REAL_FILE_PATH,
-          customFormats: [{ name: 'Custom' }],
+          CustomFormatFormats: [{ name: 'CustomFormat' }],
           quality: {
             quality: {
-              name: 'Quality',
-              resolution: '1080p',
+              name: 'HDTV-720p',
             },
-            revision: 'Rev',
+            revision: {
+              version: 1
+            },
           },
           releaseGroup: 'RlsGrp',
         },
@@ -262,7 +267,7 @@ describe('EmbyMediaServer', () => {
       };
       await embyMediaServer.linkEpisodeToLibrary(episode as any);
       expect(mockPouchDBGet).toHaveBeenCalledWith('1');
-      expect(mockCreateSymLink).toHaveBeenCalledWith(MOCKED_REAL_FILE_PATH, '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
+      expect(mockCreateSymLink).toHaveBeenCalledWith(MOCKED_REAL_FILE_PATH, '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
     });
 
     it('should remove the symlink for an existing episode if the real path has been removed', async () => {
@@ -270,7 +275,7 @@ describe('EmbyMediaServer', () => {
         _id: '1',
         realPath: MOCKED_REAL_FILE_PATH,
         mediaServers: {
-          emby2: '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
+          emby2: '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
         },
       });
       const episode = {
@@ -329,7 +334,7 @@ describe('EmbyMediaServer', () => {
         _id: '1',
         realPath: MOCKED_REAL_FILE_PATH,
         mediaServers: {
-          emby2: '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [Custom Quality 1080p Rev][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
+          emby2: '/media/emby2/tv/Friends (1994) [imdbid-tt0108778]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
         },
       });
       mockDoesFileExist.mockResolvedValue(true);
@@ -346,13 +351,14 @@ describe('EmbyMediaServer', () => {
         title: 'The One Where Monica Gets a Roommate',
         episodeFile: {
           path: MOCKED_REAL_FILE_PATH,
-          customFormats: [{ name: 'Custom' }],
+          CustomFormatFormats: [{ name: 'CustomFormat' }],
           quality: {
             quality: {
-              name: 'Quality',
-              resolution: '1080p',
+              name: 'HDTV-720p',
             },
-            revision: 'Rev',
+            revision: {
+              version: 1
+            },
           },
           releaseGroup: 'RlsGrp',
         },
