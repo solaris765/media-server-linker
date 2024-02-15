@@ -35,11 +35,8 @@ export default class EmbyMediaServer extends MediaServer {
     if (episode.episodeFile.quality?.quality?.name) {
       customFormatsAndQuality += ` ${episode.episodeFile.quality.quality.name}`
     }
-    if (episode.episodeFile.quality?.quality?.resolution) {
-      customFormatsAndQuality += ` ${episode.episodeFile.quality.quality.resolution}`
-    }
-    if (episode.episodeFile.quality?.revision) {
-      customFormatsAndQuality += ` ${episode.episodeFile.quality.revision}`
+    if (episode.episodeFile.quality?.revision?.version) {
+      customFormatsAndQuality += ` v${episode.episodeFile.quality.revision.version}`
     }
     customFormatsAndQuality = `[${customFormatsAndQuality.trim().replace(/ +/g, ' ')}]`
 
