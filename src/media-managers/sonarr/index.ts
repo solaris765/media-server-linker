@@ -79,9 +79,7 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
    * @param options 
    * @returns 
    */
-  async getSeries(seriesId?: number,
-    options?: Record<string,
-      string>) {
+  async getSeries(seriesId?: number, options?: Record<string, string>): Promise<SeriesResource[]> {
     const query = new URLSearchParams(options).toString();
     const response = await this._callAPI<SeriesResource[]>(`/series/${seriesId}${query ? '?' + query : ''}`,
       {
@@ -156,6 +154,31 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
       return this.fallbackPayloadHandler(body);
     }
     return this.fallbackPayloadHandler(body);
+  }
+
+  async bulkProcess() {
+    const allseries = await this.getSeries();
+    let seriesCount = 0;
+    let episodeCount = 0;
+    let failed = 0;
+    let success = 0;
+    for (const series of allseries) {
+      seriesCount++;
+      const seriesRes = await this._callAPI<EpisodeResource[]>(`/episode?seriesId=${series.id}`);
+      const episodes = await seriesRes.json<EpisodeResource[]>();
+      for (const episode of episodes) {
+        episodeCount++;
+        await linkEpisodeToLibrary(episode, this.logger)
+          .then(() => {
+            success++;
+          })
+          .catch((e) => {
+            failed++;
+            this.logger.error(`Error linking episode: ${e}`);
+          });
+      }
+    }
+    return { seriesCount, episodeCount, failed, success};
   }
 }
 

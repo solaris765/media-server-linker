@@ -1,8 +1,7 @@
-import fs from 'fs';
 import fastify from 'fastify';
 import { mediaManagers } from './media-managers';
-import curlString from 'curl-string';
 import { saveCurlToFile } from './util/curl';
+import SonarrHandler from './media-managers/sonarr';
 
 const app = fastify({ logger: true });
 
@@ -34,6 +33,15 @@ for (const manager of mediaManagers) {
     reply.send();
   });
 }
+
+app.get('/tv', async (request, reply) => {
+  const mediaMng = new SonarrHandler({
+    logger: request.log
+  });
+
+  const result = await mediaMng.bulkProcess();
+  reply.send(result);
+});
 
 let PORT = 3000;
 try {
