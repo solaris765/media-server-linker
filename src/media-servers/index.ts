@@ -1,7 +1,6 @@
 import type { EpisodeResource } from "../media-managers/sonarr/types/api";
 import type { Logger } from "../types";
 import fs from "fs/promises";
-import fsSync from "fs";
 import { createSymLink, doesFileExist, removeLink } from "../util/filesystem";
 import type { MinDBImplementation } from "../link-dbs";
 import PouchDB from "pouchdb";
@@ -31,11 +30,6 @@ export abstract class MediaServer {
   constructor(options: MediaServerOptions) {
     this.logger = options.logger;
     this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
-
-    if (process.env.DB_PATH) {
-      fsSync.mkdirSync(process.env.DB_PATH, { recursive: true });
-    }
-
     this.tvDb = options.tvDb || new PouchDB('tvdb', { prefix: process.env.DB_PATH });
     this.movieDb = options.movieDb  || new PouchDB('moviedb', { prefix: process.env.DB_PATH });
   }

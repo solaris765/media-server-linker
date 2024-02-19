@@ -1,4 +1,5 @@
 import PouchDB from 'pouchdb'
+import fs from "fs";
 
 export interface DBEntryLike {
   _id: string;
@@ -42,6 +43,10 @@ export class DBEntry {
 }
 
 export type MinDBImplementation = Pick<PouchDB.Database<DBEntryLike>, 'get' | 'put'>;
+
+if (process.env.DB_PATH) {
+  fs.mkdirSync(process.env.DB_PATH, { recursive: true });
+}
 
 export const tvDb = new PouchDB('tvdb', { prefix: process.env.DB_PATH })
 
