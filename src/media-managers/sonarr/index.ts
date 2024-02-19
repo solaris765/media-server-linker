@@ -10,7 +10,9 @@ import { type WebhookPayload, type WebhookTestPayload, WebhookEventType, type We
 import { saveCurlToFile } from "../../util/curl";
 import { linkEpisodeToLibrary } from "../../media-servers";
 
-export const sonarrDB = new pouchdb<DBEntryLike>('sonarrDB');
+export const sonarrDB = new pouchdb<DBEntryLike>('sonarrDB',{
+  prefix: process.env.DB_PATH || '/data/db/',
+});
 
 function isTestEvent(eventPayload: WebhookPayload): eventPayload is WebhookTestPayload {
   return eventPayload.eventType === WebhookEventType.Test;
