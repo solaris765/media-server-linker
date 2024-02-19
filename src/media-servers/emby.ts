@@ -1,6 +1,6 @@
 import { MediaServer } from ".";
+import { DBEntry } from "../link-dbs";
 import type { EpisodeResource, SeriesResource } from "../media-managers/sonarr/types/api";
-import { DBEntry } from "../util/filesystem";
 import sanitize from "sanitize-filename";
 
 export default class EmbyMediaServer extends MediaServer {
@@ -161,14 +161,11 @@ export default class EmbyMediaServer extends MediaServer {
     const series = firstEpisode.series;
     const linkPath = this.mediaServerPathForEpisode(series, episodeResource);
 
-
-    const db = this.getDB('tv');
-
     for (const episode of episodeResource) {
 
       let dbEntry: DBEntry | null = null;
       try {
-        dbEntry = DBEntry.fromDoc(await db.get(episode.id.toString()));
+        dbEntry = DBEntry.fromDoc(await this.tvDb.get(episode.id.toString()));
       } catch (e) {
         // this.logger.info(`No entry found for ${episode.id}`);
       }
@@ -187,7 +184,7 @@ export default class EmbyMediaServer extends MediaServer {
           }
         });
         await this.fileSystem.createSymLink(realPath, linkPath);
-        await db.put(dbEntry.toDoc());
+        await this.tvDb.put(dbEntry.toDoc());
         return true;
       }
 
@@ -202,7 +199,7 @@ export default class EmbyMediaServer extends MediaServer {
         this.logger.info(`Creating link for ${linkPath}`);
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-        await db.put(dbEntry.toDoc());
+        await this.tvDb.put(dbEntry.toDoc());
         return true;
       }
 
@@ -212,7 +209,7 @@ export default class EmbyMediaServer extends MediaServer {
         await this.fileSystem.removeLink(savedLinkPath);
         dbEntry.realPath = '';
         delete dbEntry.mediaServers[this.mediaServerPath];
-        await db.put(dbEntry.toDoc());
+        await this.tvDb.put(dbEntry.toDoc());
         return true;
       }
 
@@ -222,7 +219,7 @@ export default class EmbyMediaServer extends MediaServer {
         await this.fileSystem.removeLink(savedLinkPath);
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-        await db.put(dbEntry.toDoc());
+        await this.tvDb.put(dbEntry.toDoc());
         return true;
       }
 

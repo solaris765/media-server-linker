@@ -2,36 +2,20 @@ import type { EpisodeResource } from "../media-managers/sonarr/types/api";
 import type { Logger } from "../types";
 import fs from "fs/promises";
 import fsSync from "fs";
-import type { DBEntryLike } from "../util/filesystem";
-import PouchDB from "pouchdb";
 import { createSymLink, doesFileExist, removeLink } from "../util/filesystem";
-
-export function getCacheDB(name: string) {
-  if (!process.env.DB_PATH) {
-    throw new Error('DB_PATH is not defined');
-  }
-  if (!process.env.DB_PATH.endsWith('/')) {
-    process.env.DB_PATH += '/';
-  }
-  if (!name) {
-    throw new Error('DB name is not defined');
-  }
-  const dbPath = process.env.DB_PATH || '/data/db/';
-  fsSync.mkdirSync(dbPath, { recursive: true });
-  return new PouchDB<DBEntryLike>(name, {
-    prefix: dbPath,
-  });
-}
+import type { MinDBImplementation } from "../link-dbs";
+import PouchDB from "pouchdb";
 
 interface MinFSImplementation {
   createSymLink: (target: string, linkPath: string) => Promise<void>;
   doesFileExist: (path: string) => Promise<boolean>;
   removeLink: (linkPath: string) => Promise<void>;
 }
-type MinDBImplementation = Pick<PouchDB.Database<DBEntryLike>, 'get' | 'put'>;
+
 export interface MediaServerOptions {
   logger: Logger;
-  db: MinDBImplementation;
+  tvDb?: MinDBImplementation;
+  movieDb?: MinDBImplementation;
   fileSystem?: MinFSImplementation
 }
 export abstract class MediaServer {
@@ -40,23 +24,20 @@ export abstract class MediaServer {
   protected mediaSourceDir = process.env.MEDIA_SOURCE_DIR || 'data';
   abstract mediaServerPath: string;
 
-  private _db: MinDBImplementation;
   protected fileSystem: MinFSImplementation
-
-  protected getDB(libraryType: string) {
-    return {
-      get: (id: string) => this._db.get(libraryType+id),
-      put: (doc: DBEntryLike) => {
-        doc._id = libraryType+doc._id;
-        return this._db.put(doc)
-      }
-    }
-  }
+  tvDb: MinDBImplementation;
+  movieDb: MinDBImplementation;
 
   constructor(options: MediaServerOptions) {
     this.logger = options.logger;
-    this._db = options.db;
     this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
+
+    if (process.env.DB_PATH) {
+      fsSync.mkdirSync(process.env.DB_PATH, { recursive: true });
+    }
+
+    this.tvDb = options.tvDb || new PouchDB('tvdb', { prefix: process.env.DB_PATH });
+    this.movieDb = options.movieDb  || new PouchDB('moviedb', { prefix: process.env.DB_PATH });
   }
 
   abstract linkEpisodeToLibrary(episode: EpisodeResource[]): Promise<boolean> | boolean;
@@ -66,7 +47,7 @@ export interface MediaServerConstructor {
   new (options: MediaServerOptions): MediaServer;
 }
 
-let mediaServerModules: [string, MediaServerConstructor][] = [];
+let mediaServerModules: MediaServerConstructor[] = [];
 
 async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
   let mediaServers: MediaServer[] = [];
@@ -79,16 +60,15 @@ async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
       );
     for (const file of files) {
       const module = await import(`./${file}`);
-      const moduleName = file.split('.')[0];
       if (!module.default) {
         logger.error(`No default export found in ${file}`);
         continue;
       }
-      mediaServerModules.push([moduleName, module.default]);
-      mediaServers.push(new module.default({ logger, db: getCacheDB(moduleName)}));
+      mediaServerModules.push(module.default);
+      mediaServers.push(new module.default({ logger }));
     }
   } else {
-    mediaServers = mediaServerModules.map(([name, module]) => new module({ logger, db: getCacheDB(name) }));
+    mediaServers = mediaServerModules.map(module => new module({ logger }));
   }
 
   return mediaServers;
@@ -96,7 +76,7 @@ async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
 
 export async function linkEpisodeToLibrary(
   episode: EpisodeResource[],
-  logger: Logger
+  logger: Logger,
 ): Promise<boolean> {
   const mediaServers = await getMediaServers(logger);
 
