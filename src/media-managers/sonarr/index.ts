@@ -12,9 +12,6 @@ import { linkEpisodeToLibrary } from "../../media-servers";
 
 export const sonarrDB = new pouchdb<DBEntryLike>('sonarrDB');
 
-const API = (process.env.SONARR_BASE_URL as string).replace(/\/$/, '');
-const API_KEY = process.env.SONARR_API_KEY as string;
-
 function isTestEvent(eventPayload: WebhookPayload): eventPayload is WebhookTestPayload {
   return eventPayload.eventType === WebhookEventType.Test;
 }
@@ -57,6 +54,8 @@ function isManualInteractionEvent(eventPayload: WebhookPayload): eventPayload is
 
 class SonarrHandler extends MediaManager<WebhookPayload> {
   private async _callAPI<T>(route: string, req?: RequestInit): Promise<TypedResponse<T>> {
+    const API = (process.env.SONARR_BASE_URL as string).replace(/\/$/, '');
+    const API_KEY = process.env.SONARR_API_KEY as string;
     let init = {
       ...req,
       headers: {
@@ -211,7 +210,7 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
       let i = 0;
       for (const episode of episodes) {
         i++;
-        let isEveryFourth = i%4 === 0;
+        let isEveryFourth = i % 4 === 0;
         if (quick && !isEveryFourth) {
           continue;
         }
