@@ -78,6 +78,11 @@ export default class EmbyMediaServer extends MediaServer {
       titleSection = episodeResource.title
     }
 
+    let tvdbId = ''
+    if (episodeResource.tvdbId) {
+      tvdbId = `[tvdbId-${episodeResource.tvdbId}]`
+    }
+
     let num = ''
     let abs = ''
 
@@ -110,7 +115,7 @@ export default class EmbyMediaServer extends MediaServer {
         else
           episodeSection += num
 
-        fileName = `${seriesSection} - ${episodeSection} - ${titleSection} ${customFormatsAndQuality}${videoDynamicRangeType}${videoBitDepth}${videoCodec}${audioCodec}${audioLanguages}${releaseGroup}`;
+        fileName = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}${customFormatsAndQuality}${videoDynamicRangeType}${videoBitDepth}${videoCodec}${audioCodec}${audioLanguages}${releaseGroup}`;
         break;
       default:
         /**
@@ -124,7 +129,7 @@ export default class EmbyMediaServer extends MediaServer {
         episodeSection = `S${episodeResource.seasonNumber.toString().padStart(2, '0')}${num}`
 
 
-        fileName = `${seriesSection} - ${episodeSection} - ${titleSection} ${customFormatsAndQuality}${videoDynamicRangeType}${audioCodec}${videoCodec}${releaseGroup}`;
+        fileName = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}${customFormatsAndQuality}${videoDynamicRangeType}${audioCodec}${videoCodec}${releaseGroup}`;
         break;
     }
 
