@@ -31,7 +31,7 @@ export abstract class MediaServer {
     this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
   }
 
-  abstract linkEpisodeToLibrary(episode: EpisodeResource): Promise<boolean> | boolean;
+  abstract linkEpisodeToLibrary(episode: EpisodeResource[]): Promise<boolean> | boolean;
 }
 
 export interface MediaServerConstructor {
@@ -66,7 +66,7 @@ async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
 }
 
 export async function linkEpisodeToLibrary(
-  episode: EpisodeResource,
+  episode: EpisodeResource[],
   logger: Logger
 ): Promise<boolean> {
   const mediaServers = await getMediaServers(logger);

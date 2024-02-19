@@ -43,19 +43,34 @@ export class DBEntry {
   }
 }
 
-export async function createSymLink(source: string, destination: string): Promise<void> {
+async function ensurePathExists(path: string): Promise<void> {
   // ensure the destination directory exists creating its parent directories if necessary
-  const destinationDirectory = destination.split('/').slice(0, -1)
+  const destinationDirectory = path.split('/').slice(0, -1)
 
   await fs.mkdir(destinationDirectory.join('/'), { recursive: true });
+}
+export async function createSymLink(source: string, destination: string): Promise<void> {
+  await ensurePathExists(destination);
 
+  // if the destination exists, remove it
+  if (await doesFileExist(destination)) {
+    await fs.unlink(destination);
+  }
   return fs.link(source, destination);
 }
 
-export function doesFileExist(path: string): Promise<boolean> {
-  return fs.access(path).then(() => true).catch(() => false);
+export async function doesFileExist(path: string): Promise<boolean> {
+  try {
+    await fs.access(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-export function removeLink(linkPath: string): Promise<void> {
-  return fs.unlink(linkPath);
+export async function removeLink(linkPath: string): Promise<void> {
+  await ensurePathExists(linkPath);
+  if (await doesFileExist(linkPath)) {
+    return fs.unlink(linkPath);
+  }
 }

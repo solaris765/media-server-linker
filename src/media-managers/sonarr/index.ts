@@ -3,6 +3,7 @@ import { MediaManager, type TypedResponse } from "../../types";
 import type { DBEntryLike } from "../../util/filesystem";
 import {
   type EpisodeResource,
+  type ParseResource,
   type SeriesResource,
 } from "./types/api"
 import { type WebhookPayload, type WebhookTestPayload, WebhookEventType, type WebhookGrabPayload, type WebhookImportPayload, type WebhookRenamePayload, type WebhookSeriesAddPayload, type WebhookSeriesDeletePayload, type WebhookEpisodeDeletePayload, type WebhookHealthPayload, type WebhookApplicationUpdatePayload, type WebhookManualInteractionPayload, type WebhookEpisodeChangePayload } from "./types/webhooks";
@@ -81,28 +82,68 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
    */
   async getSeries(seriesId?: number, options?: Record<string, string>): Promise<SeriesResource[]> {
     const query = new URLSearchParams(options).toString();
-    const response = await this._callAPI<SeriesResource[]>(`/series/${seriesId}${query ? '?' + query : ''}`,
-      {
-        method: 'GET',
-      });
+    if (seriesId) {
+      const response = await this._callAPI<SeriesResource[]>(`/series/${seriesId}?${query}`,
+        {
+          method: 'GET',
+        });
 
-    return await response.json();
+      return await response.json();
+    } else {
+      const response = await this._callAPI<SeriesResource[]>(`/series?${query}`,
+        {
+          method: 'GET',
+        });
+
+      return await response.json();
+    }
   }
 
-  async getEpisode(episodeId: number): Promise<EpisodeResource> {
+  async getEpisode(episodeId: number): Promise<EpisodeResource[]> {
     const response = await this._callAPI(
       `/episode/${episodeId}`,
       {
         method: 'GET',
       });
 
-    return await response.json();
+    const ep = await response.json<EpisodeResource>();
+
+    let result: EpisodeResource[] = []
+    if (!ep) {
+      return result;
+    }
+    result = [ep];
+    if (ep.title && ep.episodeFile?.path) {
+      const parsedEpisode = await this.parse(ep.series.title, ep.episodeFile.path);
+      if (parsedEpisode?.episodes?.length > 1) {
+        // filter is a precaution to remove potential null entries
+        result = result.concat(parsedEpisode.episodes.slice(1)).filter((e) => !!e)
+      }
+    }
+
+    if (!result[0].series) {
+      // fallback to get the series
+      result[0].series = (await this.getSeries(result[0].seriesId))[0];
+    }
+
+    return result;
+  }
+
+  async parse(title: string, path: string): Promise<ParseResource> {
+    const response = await this._callAPI<{ series: SeriesResource }>(`/parse?path=${path}&title=${title}`);
+    return response.json();
+  }
+
+  async processEpisodeById(episodeId: number) {
+    const episodeResource = await this.getEpisode(episodeId);
+    await linkEpisodeToLibrary(episodeResource, this.logger);
+    return true;
   }
 
   async processEpisodeChanged(body: WebhookEpisodeChangePayload) {
     for (const episode of body.episodes) {
       const episodeResource = await this.getEpisode(episode.id);
-      this.logger.info(`Processing episode: ${episodeResource.title}`);
+      this.logger.info(`Processing episode: ${episodeResource[0].title}`);
       await linkEpisodeToLibrary(episodeResource, this.logger);
     }
 
@@ -156,7 +197,7 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
     return this.fallbackPayloadHandler(body);
   }
 
-  async bulkProcess() {
+  async bulkProcess(quick?: boolean) {
     const allseries = await this.getSeries();
     let seriesCount = 0;
     let episodeCount = 0;
@@ -166,9 +207,22 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
       seriesCount++;
       const seriesRes = await this._callAPI<EpisodeResource[]>(`/episode?seriesId=${series.id}`);
       const episodes = await seriesRes.json<EpisodeResource[]>();
+
+      let i = 0;
       for (const episode of episodes) {
+        i++;
+        let isEveryFourth = i%4 === 0;
+        if (quick && !isEveryFourth) {
+          continue;
+        }
+        const episodeResource = await this.getEpisode(episode.id);
+        if (episodeResource.length === 0) {
+          // skip episodes that don't have a file
+          // seems to indicate multi-episode files
+          continue;
+        }
         episodeCount++;
-        await linkEpisodeToLibrary(episode, this.logger)
+        await linkEpisodeToLibrary(episodeResource, this.logger)
           .then(() => {
             success++;
           })
@@ -177,8 +231,9 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
             this.logger.error(`Error linking episode: ${e}`);
           });
       }
+
     }
-    return { seriesCount, episodeCount, failed, success};
+    return { seriesCount, episodeCount, failed, success };
   }
 }
 

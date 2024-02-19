@@ -1,5 +1,5 @@
 import fastify from 'fastify';
-import { mediaManagers } from './media-managers';
+import { getMediaManagers } from './media-managers';
 import { saveCurlToFile } from './util/curl';
 import SonarrHandler from './media-managers/sonarr';
 
@@ -10,6 +10,7 @@ app.get('/', async (request, reply) => {
   reply.send({ hello: 'world' });
 });
 
+const mediaManagers = await getMediaManagers();
 for (const manager of mediaManagers) {
   app.post(`/${manager.name}`, async (request, reply) => {
     const handler = new manager.handler({
@@ -34,13 +35,23 @@ for (const manager of mediaManagers) {
   });
 }
 
-app.get('/tv', async (request, reply) => {
+interface TVQuery {
+  id: string;
+  quick: 'true' | 'false';
+}
+app.get<{Querystring:TVQuery}>('/tv', async (request, reply) => {
   const mediaMng = new SonarrHandler({
     logger: request.log
   });
 
-  const result = await mediaMng.bulkProcess();
-  reply.send(result);
+  if (request.query.id) {
+    const result = await mediaMng.processEpisodeById(Number.parseInt(request.query.id));
+    reply.send(result);
+    return;
+  } else {
+    const result = await mediaMng.bulkProcess(request.query.quick === 'true');
+    reply.send(result);
+  }
 });
 
 let PORT = 3000;
