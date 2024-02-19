@@ -1,6 +1,4 @@
-import pouchdb from "pouchdb";
 import { MediaManager, type TypedResponse } from "../../types";
-import type { DBEntryLike } from "../../util/filesystem";
 import {
   type EpisodeResource,
   type ParseResource,
@@ -9,10 +7,6 @@ import {
 import { type WebhookPayload, type WebhookTestPayload, WebhookEventType, type WebhookGrabPayload, type WebhookImportPayload, type WebhookRenamePayload, type WebhookSeriesAddPayload, type WebhookSeriesDeletePayload, type WebhookEpisodeDeletePayload, type WebhookHealthPayload, type WebhookApplicationUpdatePayload, type WebhookManualInteractionPayload, type WebhookEpisodeChangePayload } from "./types/webhooks";
 import { saveCurlToFile } from "../../util/curl";
 import { linkEpisodeToLibrary } from "../../media-servers";
-
-export const sonarrDB = new pouchdb<DBEntryLike>('sonarrDB',{
-  prefix: process.env.DB_PATH || '/data/db/',
-});
 
 function isTestEvent(eventPayload: WebhookPayload): eventPayload is WebhookTestPayload {
   return eventPayload.eventType === WebhookEventType.Test;
