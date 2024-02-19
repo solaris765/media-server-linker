@@ -1,5 +1,8 @@
 import PouchDB from 'pouchdb'
+import PouchDBFind from 'pouchdb-find'
 import fs from "fs";
+
+PouchDB.plugin(PouchDBFind);
 
 export interface DBEntryLike {
   _id: string;

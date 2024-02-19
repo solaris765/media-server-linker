@@ -94,6 +94,9 @@ export async function cleanupMediaServers(
 
   let success = true;
   for (const mediaServer of mediaServers) {
+    if (!mediaServer) {
+      continue;
+    }
     const mediaServerPath = path.resolve(mediaServer.mediaRootPath, mediaServer.mediaServerPath)    
     const librarys = await fs.readdir(mediaServerPath);
     for (const library of librarys) {
