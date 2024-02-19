@@ -100,14 +100,14 @@ export async function cleanupMediaServers(
       const libraryPath = path.resolve(mediaServerPath, library);
       const files = await getFilesFromMediaPath(libraryPath);
       for (const file of files) {
-        let isInTVDb = await mediaServer.tvDb.find({
+        let isInTVDb = await mediaServer.tvDb?.find({
           selector: {
             mediaServers: {
               [mediaServer.mediaServerPath]: file
             }
           }
         });
-        let isInMovieDb = await mediaServer.movieDb.find({
+        let isInMovieDb = await mediaServer.movieDb?.find({
           selector: {
             mediaServers: {
               [mediaServer.mediaServerPath]: file
