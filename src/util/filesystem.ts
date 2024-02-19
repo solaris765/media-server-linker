@@ -35,6 +35,6 @@ export async function removeLink(linkPath: string): Promise<void> {
 
 export async function getFilesFromMediaPath(path:string): Promise<string[]> {
   return glob(`${path}/**/*.*`,{withFileTypes: true}).then((files) => {
-    return files.filter((file) => file.isFile()).map((file) => file.path)
+    return files.filter((file) => file.isFile()).map((file) => file.fullpath())
   });
 }
