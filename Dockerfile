@@ -1,4 +1,4 @@
-FROM oven/bun:1 as base
+FROM oven/bun:latest as base
 
 FROM base AS install
 RUN mkdir -p /temp/dev
@@ -19,13 +19,14 @@ COPY . .
 # [optional] tests & build
 ENV NODE_ENV=production
 RUN bun test
-RUN bun run build
 
 # copy production dependencies and source code into final image
 FROM base AS release
 COPY --from=install /temp/prod/node_modules node_modules
-COPY --from=prerelease /usr/src/app/index.ts .
-COPY --from=prerelease /usr/src/app/package.json .
+COPY --from=prerelease /home/bun/app/src .
+COPY --from=prerelease /home/bun/app/package.json .
+
+RUN pwd && ls -la
 
 # run the app
 USER bun
