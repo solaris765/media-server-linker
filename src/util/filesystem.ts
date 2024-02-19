@@ -1,5 +1,4 @@
 import fs from 'fs/promises';
-import pouchdb from 'pouchdb';
 
 
 export interface DBEntryLike {
