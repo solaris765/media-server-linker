@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import { glob,  } from 'glob';
 
 async function ensurePathExists(path: string): Promise<void> {
   // ensure the destination directory exists creating its parent directories if necessary
@@ -30,4 +31,8 @@ export async function removeLink(linkPath: string): Promise<void> {
   if (await doesFileExist(linkPath)) {
     return fs.unlink(linkPath);
   }
+}
+
+export async function getFilesFromMediaPath(path:string): Promise<string[]> {
+  return glob(`${path}/**/*`);
 }

@@ -1,7 +1,8 @@
 import type { EpisodeResource } from "../media-managers/sonarr/types/api";
 import type { Logger } from "../types";
 import fs from "fs/promises";
-import { createSymLink, doesFileExist, removeLink } from "../util/filesystem";
+import path from "path";
+import { createSymLink, doesFileExist, removeLink, getFilesFromMediaPath} from "../util/filesystem";
 import type { MinDBImplementation } from "../link-dbs";
 import PouchDB from "pouchdb";
 
@@ -19,7 +20,7 @@ export interface MediaServerOptions {
 }
 export abstract class MediaServer {
   protected logger: Logger;
-  protected mediaRootPath = process.env.MEDIA_ROOT_PATH || '/media';
+  mediaRootPath = process.env.MEDIA_ROOT_PATH || '/media';
   protected mediaSourceDir = process.env.MEDIA_SOURCE_DIR || 'data';
   abstract mediaServerPath: string;
 
@@ -81,6 +82,48 @@ export async function linkEpisodeToLibrary(
     } catch (e) {
       logger.error(`Error linking episode to ${mediaServer.mediaServerPath}: ${e}`);
       success = false;
+    }
+  }
+  return success;
+}
+
+export async function cleanupMediaServers(
+  logger: Logger,
+): Promise<boolean> {
+  const mediaServers = await getMediaServers(logger);
+
+  let success = true;
+  for (const mediaServer of mediaServers) {
+    const mediaServerPath = path.resolve(mediaServer.mediaRootPath, mediaServer.mediaServerPath)    
+    const librarys = await fs.readdir(mediaServerPath);
+    for (const library of librarys) {
+      const libraryPath = path.resolve(mediaServerPath, library);
+      const files = await getFilesFromMediaPath(libraryPath);
+      for (const file of files) {
+        let isInTVDb = await mediaServer.tvDb.find({
+          selector: {
+            mediaServers: {
+              [mediaServer.mediaServerPath]: file
+            }
+          }
+        });
+        let isInMovieDb = await mediaServer.movieDb.find({
+          selector: {
+            mediaServers: {
+              [mediaServer.mediaServerPath]: file
+            }
+          }
+        });
+        if (isInTVDb.docs.length === 0 && isInMovieDb.docs.length === 0) {
+          try {
+            logger.info(`Removing link: ${file}`);
+            // await fs.unlink(file);
+          } catch (e) {
+            logger.error(`Error removing link: ${e}`);
+            success = false;
+          }
+        }
+      }
     }
   }
   return success;

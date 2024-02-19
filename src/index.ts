@@ -2,6 +2,7 @@ import fastify from 'fastify';
 import { getMediaManagers } from './media-managers';
 import { saveCurlToFile } from './util/curl';
 import SonarrHandler from './media-managers/sonarr';
+import { cleanupMediaServers } from './media-servers';
 
 // catch signals and properly close the server
 process.on('SIGINT', async () => {
@@ -59,6 +60,12 @@ app.get<{Querystring:TVQuery}>('/tv', async (request, reply) => {
     const result = await mediaMng.bulkProcess(request.query.quick === 'true');
     reply.send(result);
   }
+});
+
+app.get('/cleanup', async (request, reply) => {
+  await cleanupMediaServers(request.log);
+
+  reply.send({ success: true });
 });
 
 let PORT = 3000;

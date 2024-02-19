@@ -42,7 +42,7 @@ export class DBEntry {
   }
 }
 
-export type MinDBImplementation = Pick<PouchDB.Database<DBEntryLike>, 'get' | 'put'>;
+export type MinDBImplementation = Pick<PouchDB.Database<DBEntryLike>, 'get' | 'put' | 'find'>;
 
 if (process.env.DB_PATH) {
   fs.mkdirSync(process.env.DB_PATH, { recursive: true });

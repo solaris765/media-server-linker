@@ -17,6 +17,7 @@
   "dependencies": {
     "curl-string": "^3.1.0",
     "fastify": "^4.26.0",
+    "glob": "^10.3.10",
     "pouchdb": "^8.0.1",
     "sanitize-filename": "^1.6.3"
   }
