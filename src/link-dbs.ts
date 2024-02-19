@@ -1,9 +1,5 @@
 import PouchDB from 'pouchdb'
 
-if (!process.env.DB_PATH) {
-  throw new Error('DB_PATH is not defined')
-}
-
 export interface DBEntryLike {
   _id: string;
   _rev?: string;
