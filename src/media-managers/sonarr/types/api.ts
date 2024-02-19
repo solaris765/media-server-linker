@@ -236,17 +236,17 @@ export interface EpisodeResource {
   seasonNumber: number;
   episodeNumber: number;
   title: string | null;
-  airDate: string | null;
-  airDateUtc: string | null;
+  airDate?: string | null;
+  airDateUtc?: string | null;
   runtime: number;
   finaleType: string | null;
-  overview: string | null;
-  episodeFile: EpisodeFileResource;
+  overview?: string | null;
+  episodeFile?: EpisodeFileResource;
   customFormatScore: number;
   mediaInfo: MediaInfoResource;
   qualityCutoffNotMet: boolean;
   series: SeriesResource;
-  absoluteEpisodeNumber: number;
+  absoluteEpisodeNumber?: number;
   hasFile: boolean;
 }
 
@@ -312,3 +312,47 @@ enum SeriesTypes {
   anime = "anime",
 }
 
+export interface SeriesTitleInfo {
+  title?: string;
+  titleWithoutYear?: string;
+  year: number;
+  allTitles: string[];
+}
+
+export interface ParsedEpisodeInfo {
+  releaseTitle?: string;
+  seriesTitle?: string;
+  seriesTitleInfo: SeriesTitleInfo;
+  quality: QualityModel;
+  seasonNumber: number;
+  episodeNumbers: number[];
+  absoluteEpisodeNumbers: number[];
+  specialAbsoluteEpisodeNumbers: number[];
+  airDate?: string;
+  languages: Language[];
+  fullSeason: boolean;
+  isPartialSeason: boolean;
+  isMultiSeason: boolean;
+  isSeasonExtra: boolean;
+  isSplitEpisode: boolean;
+  special: boolean;
+  releaseGroup?: string;
+  releaseHash?: string;
+  seasonPart: number;
+  releaseTokens?: string;
+  dailyPart?: number;
+  isDaily?: boolean;
+  isAbsoluteNumbering?: boolean;
+  isPossibleSpecialEpisode?: boolean;
+  isPossibleSceneSeasonSpecial?: boolean;
+}
+export interface ParseResource {
+  id: number;
+  title: string;
+  parsedEpisodeInfo: ParsedEpisodeInfo;
+  series: SeriesResource;
+  episodes: EpisodeResource[];
+  languages: Language[];
+  customFormats: CustomFormatResource[];
+  customFormatScore: number;
+}
