@@ -162,12 +162,13 @@ export default class EmbyMediaServer extends MediaServer {
     const linkPath = this.mediaServerPathForEpisode(series, episodeResource);
 
 
+    const db = this.getDB('tv');
 
     for (const episode of episodeResource) {
 
       let dbEntry: DBEntry | null = null;
       try {
-        dbEntry = DBEntry.fromDoc(await this.db.get(episode.id.toString()));
+        dbEntry = DBEntry.fromDoc(await db.get(episode.id.toString()));
       } catch (e) {
         // this.logger.info(`No entry found for ${episode.id}`);
       }
@@ -186,7 +187,7 @@ export default class EmbyMediaServer extends MediaServer {
           }
         });
         await this.fileSystem.createSymLink(realPath, linkPath);
-        await this.db.put(dbEntry.toDoc());
+        await db.put(dbEntry.toDoc());
         return true;
       }
 
@@ -201,7 +202,7 @@ export default class EmbyMediaServer extends MediaServer {
         this.logger.info(`Creating link for ${linkPath}`);
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-        await this.db.put(dbEntry.toDoc());
+        await db.put(dbEntry.toDoc());
         return true;
       }
 
@@ -211,7 +212,7 @@ export default class EmbyMediaServer extends MediaServer {
         await this.fileSystem.removeLink(savedLinkPath);
         dbEntry.realPath = '';
         delete dbEntry.mediaServers[this.mediaServerPath];
-        await this.db.put(dbEntry.toDoc());
+        await db.put(dbEntry.toDoc());
         return true;
       }
 
@@ -221,7 +222,7 @@ export default class EmbyMediaServer extends MediaServer {
         await this.fileSystem.removeLink(savedLinkPath);
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-        await this.db.put(dbEntry.toDoc());
+        await db.put(dbEntry.toDoc());
         return true;
       }
 

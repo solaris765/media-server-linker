@@ -40,12 +40,22 @@ export abstract class MediaServer {
   protected mediaSourceDir = process.env.MEDIA_SOURCE_DIR || 'data';
   abstract mediaServerPath: string;
 
-  protected db: MinDBImplementation;
+  private _db: MinDBImplementation;
   protected fileSystem: MinFSImplementation
+
+  protected getDB(libraryType: string) {
+    return {
+      get: (id: string) => this._db.get(libraryType+id),
+      put: (doc: DBEntryLike) => {
+        doc._id = libraryType+doc._id;
+        return this._db.put(doc)
+      }
+    }
+  }
 
   constructor(options: MediaServerOptions) {
     this.logger = options.logger;
-    this.db = options.db;
+    this._db = options.db;
     this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
   }
 

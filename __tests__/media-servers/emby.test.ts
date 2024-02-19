@@ -219,9 +219,9 @@ describe('EmbyMediaServer', () => {
         hasFile: true,
       };
       await embyMediaServer.linkEpisodeToLibrary([episode] as any);
-      expect(mockPouchDBGet).toHaveBeenCalledWith('1');
+      expect(mockPouchDBGet).toHaveBeenCalledWith('tv1');
       expect(mockPouchDBPut).toHaveBeenCalledWith({
-        _id: '1',
+        _id: 'tv1',
         realPath: MOCKED_REAL_FILE_PATH,
         mediaServers: {
           emby2: '/media/emby2/tv/Friends (1994) [tvdbId-1234]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4',
@@ -266,7 +266,7 @@ describe('EmbyMediaServer', () => {
         hasFile: true,
       };
       await embyMediaServer.linkEpisodeToLibrary([episode] as any);
-      expect(mockPouchDBGet).toHaveBeenCalledWith('1');
+      expect(mockPouchDBGet).toHaveBeenCalledWith('tv1');
       expect(mockCreateSymLink).toHaveBeenCalledWith(MOCKED_REAL_FILE_PATH, '/media/emby2/tv/Friends (1994) [tvdbId-1234]/Season 1/Friends (1994) - S01E01 - The One Where Monica Gets a Roommate [HDTV-720p v1][SDR][AAC 2.0 5.1][H.264]-RlsGrp.mp4');
     });
 
@@ -295,9 +295,9 @@ describe('EmbyMediaServer', () => {
         hasFile: false,
       };
       await embyMediaServer.linkEpisodeToLibrary([episode] as any);
-      expect(mockPouchDBGet).toHaveBeenCalledWith('1');
+      expect(mockPouchDBGet).toHaveBeenCalledWith('tv1');
       expect(mockPouchDBPut).toHaveBeenCalledWith({
-        _id: '1',
+        _id: 'tv1',
         _rev: undefined,
         realPath: '',
         mediaServers: {},
@@ -323,7 +323,7 @@ describe('EmbyMediaServer', () => {
       };
 
       await embyMediaServer.linkEpisodeToLibrary([episode] as any);
-      expect(mockPouchDBGet).toHaveBeenCalledWith('1');
+      expect(mockPouchDBGet).toHaveBeenCalledWith('tv1');
       expect(mockPouchDBPut).toHaveBeenCalledTimes(0);
       console.log(mockCreateSymLink.mock.calls);
       expect(mockCreateSymLink).toHaveBeenCalledTimes(0);
@@ -373,7 +373,7 @@ describe('EmbyMediaServer', () => {
         hasFile: true,
       };
       await embyMediaServer.linkEpisodeToLibrary([episode] as any);
-      expect(mockPouchDBGet).toHaveBeenCalledWith('1');
+      expect(mockPouchDBGet).toHaveBeenCalledWith('tv1');
       expect(mockPouchDBPut).toHaveBeenCalledTimes(0);
       expect(mockCreateSymLink).toHaveBeenCalledTimes(0);
     });
