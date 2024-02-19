@@ -3,6 +3,13 @@ import { getMediaManagers } from './media-managers';
 import { saveCurlToFile } from './util/curl';
 import SonarrHandler from './media-managers/sonarr';
 
+// catch signals and properly close the server
+process.on('SIGINT', async () => {
+  console.log('Caught interrupt signal');
+  await app.close();
+  process.exit();
+});
+
 const app = fastify({ logger: true });
 
 
