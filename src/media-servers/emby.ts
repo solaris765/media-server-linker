@@ -1,7 +1,7 @@
 import { MediaServer } from ".";
 import { DBEntry } from "../link-dbs";
 import type { EpisodeResource, SeriesResource } from "../media-managers/sonarr/types/api";
-import sanitize from "sanitize-filename";
+import filenamify from 'filenamify';
 
 export default class EmbyMediaServer extends MediaServer {
   mediaServerPath: string = 'emby2';
@@ -99,6 +99,7 @@ export default class EmbyMediaServer extends MediaServer {
     }
 
     let fileName = ''
+    let applySections: string[] = []
     switch (series.seriesType) {
       case 'anime':
         // {Series TitleYear} - S{season:00}E{episode:00} - {absolute:000} - {Episode CleanTitle} [{Custom Formats }{Quality Full}]{[MediaInfo VideoDynamicRangeType]}[{MediaInfo VideoBitDepth}bit]{[MediaInfo VideoCodec]}[{Mediainfo AudioCodec} { Mediainfo AudioChannels}]{MediaInfo AudioLanguages}{-Release Group}
@@ -117,7 +118,7 @@ export default class EmbyMediaServer extends MediaServer {
         else
           episodeSection += num
 
-        fileName = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}${customFormatsAndQuality}${videoDynamicRangeType}${videoBitDepth}${videoCodec}${audioCodec}${audioLanguages}${releaseGroup}`;
+        applySections = [`${seriesSection} - ${episodeSection}`, ` - ${titleSection}`, ' ', tvdbId, customFormatsAndQuality, videoDynamicRangeType, videoBitDepth, videoCodec, audioCodec, audioLanguages, releaseGroup]
         break;
       default:
         /**
@@ -131,16 +132,17 @@ export default class EmbyMediaServer extends MediaServer {
         episodeSection = `S${episodeResource.seasonNumber.toString().padStart(2, '0')}${num}`
 
 
-        fileName = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}${customFormatsAndQuality}${videoDynamicRangeType}${audioCodec}${videoCodec}${releaseGroup}`;
+        applySections = [`${seriesSection} - ${episodeSection}`, ` - ${titleSection}`, tvdbId, customFormatsAndQuality, videoDynamicRangeType, audioCodec, videoCodec, releaseGroup]
         break;
     }
 
-    fileName = sanitize(fileName);
-    if (fileName.length > 245) {
-      // remove episode title
-      fileName = fileName.replace(' - ' + titleSection, '');
-      if (fileName.length > 245) {
-        throw new Error(`Filename too long: ${fileName}`);
+    while (applySections.length > 0 && fileName.length < 245) {
+      const section = applySections.shift();
+      if (section) {
+        if (fileName.length + section.length > 245) {
+          break;
+        }
+        fileName += section;
       }
     }
 
@@ -154,7 +156,8 @@ export default class EmbyMediaServer extends MediaServer {
     const seasonFolder = this.seasonFolderName(episodeResource.seasonNumber);
     const episodeFile = this.episodeFileName(series, episode);
     const extention = episodeResource.episodeFile?.path?.split('.').pop();
-    return `${this.mediaRootPath}/${this.mediaServerPath}/${libraryDir}/${seriesFolder}/${seasonFolder}/${episodeFile}.${extention}`;
+    const filename = filenamify(episodeFile + '.' + extention, { replacement: '-', maxLength: 255});
+    return `${this.mediaRootPath}/${this.mediaServerPath}/${libraryDir}/${seriesFolder}/${seasonFolder}/${filename}`;
   }
 
   async linkEpisodeToLibrary(episodeResource: EpisodeResource[]) {
