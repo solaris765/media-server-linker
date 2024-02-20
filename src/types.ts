@@ -5,6 +5,7 @@ export interface TypedResponse<T> extends Response {
 export interface Logger {
   info(message: string): void;
   error(message: string): void;
+  warn(message: string): void;
 }
 export interface MediaManagerOptions {
   logger: Logger;
