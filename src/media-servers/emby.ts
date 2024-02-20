@@ -208,7 +208,7 @@ export default class EmbyMediaServer extends MediaServer {
       // if the linkFile doesn't exist
       if (!savedLinkPath) {
         if (!realPath) {
-          this.logger.error(`Neither realPath nor savedLinkPath exist for ${episode.id}`);
+          // this.logger.error(`Neither realPath nor savedLinkPath exist for ${episode.id}`);
           return true;
         }
         this.logger.info(`Creating link for ${linkPath}`);
