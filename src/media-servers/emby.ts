@@ -230,7 +230,7 @@ export default class EmbyMediaServer extends MediaServer {
 
       // if the the linkPath doesn't match the dbEntry, fix it
       if (linkPath !== savedLinkPath) {
-        this.logger.info(`Fixing link for ${linkPath}`);
+        this.logger.info(`Fixing link for ${linkPath}\nWas ${savedLinkPath}`);
         await this.fileSystem.removeLink(savedLinkPath);
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
