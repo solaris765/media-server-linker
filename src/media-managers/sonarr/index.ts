@@ -109,10 +109,10 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
     }
     result = [ep];
     if (ep.title && ep.episodeFile?.path) {
-      const parsedEpisode = await this.parse(ep.series.title, ep.episodeFile.path);
-      if (parsedEpisode?.episodes?.length > 1) {
+      const episodes = await this.parse(ep.series.title, ep.episodeFile.path);
+      if (episodes.length) {
         // filter is a precaution to remove potential null entries
-        for (const episode of parsedEpisode.episodes.filter(Boolean)) {
+        for (const episode of episodes) {
           if (result.find((e) => e.id === episode.id)) {
             continue;
           } else {
@@ -130,9 +130,17 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
     return result.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber);
   }
 
-  async parse(title: string, path: string): Promise<ParseResource> {
+  async parse(title: string, path: string): Promise<EpisodeResource[]> {
     const response = await this._callAPI<{ series: SeriesResource }>(`/parse?path=${path}&title=${title}`);
-    return response.json();
+    const j: ParseResource = await response.json();
+    let episodes = [];
+    for (const epNum of j.parsedEpisodeInfo.episodeNumbers) {
+      const ep = j.episodes.find((e) => e.episodeNumber === epNum);
+      if (ep) {
+        episodes.push(ep);
+      }
+    }
+    return episodes;
   }
 
   async processEpisodeById(episodeId: number) {

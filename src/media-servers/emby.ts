@@ -9,7 +9,7 @@ export default class EmbyMediaServer extends MediaServer {
   libraryDir(episode: EpisodeResource) {
     const fullPath = episode.episodeFile?.path;
     if (!fullPath) {
-      return '';
+      throw new Error('No path found');
     }
     const root = this.mediaRootPath + '/' + this.mediaSourceDir + '/';
     return fullPath.replace(root, '').split('/')[0]
@@ -32,7 +32,7 @@ export default class EmbyMediaServer extends MediaServer {
     const episodeResource = episode[0];
 
     if (!episodeResource.episodeFile) {
-      return '';
+      throw new Error('No episode file found');
     }
 
     let seriesSection = ''
@@ -100,7 +100,18 @@ export default class EmbyMediaServer extends MediaServer {
     const episodeFile = this.episodeFileName(series, episode);
     const extention = episodeResource.episodeFile?.path?.split('.').pop();
     const filename = filenamify(episodeFile + '.' + extention, { replacement: ' ', maxLength: 255});
-    return `${this.mediaRootPath}/${this.mediaServerPath}/${libraryDir}/${seriesFolder}/${seasonFolder}/${filename}`;
+
+    const finalFile = `${this.mediaRootPath}/${this.mediaServerPath}/${libraryDir}/${seriesFolder}/${seasonFolder}/${filename}`;
+    if (finalFile.includes('undefined')) {
+      throw new Error('Undefined in path');
+    }
+    if (finalFile.includes('null')) {
+      throw new Error('Null in path');
+    }
+    if (finalFile.includes('//')) {
+      throw new Error('Double slashes in path');
+    }
+    return finalFile;
   }
 
   async linkEpisodeToLibrary(episodeResource: EpisodeResource[]) {
