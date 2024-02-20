@@ -112,7 +112,13 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
       const parsedEpisode = await this.parse(ep.series.title, ep.episodeFile.path);
       if (parsedEpisode?.episodes?.length > 1) {
         // filter is a precaution to remove potential null entries
-        result = result.concat(parsedEpisode.episodes.slice(1)).filter((e) => !!e)
+        for (const episode of parsedEpisode.episodes.filter(Boolean)) {
+          if (result.find((e) => e.id === episode.id)) {
+            continue;
+          } else {
+            result.push(episode);
+          }
+        }
       }
     }
 
@@ -121,7 +127,7 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
       result[0].series = (await this.getSeries(result[0].seriesId))[0];
     }
 
-    return result;
+    return result.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber);
   }
 
   async parse(title: string, path: string): Promise<ParseResource> {

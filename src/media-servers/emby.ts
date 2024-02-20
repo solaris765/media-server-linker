@@ -90,6 +90,8 @@ export default class EmbyMediaServer extends MediaServer {
       num = `E${episodeResource.episodeNumber.toString().padStart(2, '0')}-E${episode[episode.length - 1].episodeNumber.toString().padStart(2, '0')}`
       if (episodeResource.absoluteEpisodeNumber && episode[episode.length - 1].absoluteEpisodeNumber)
         abs = `E${episodeResource.absoluteEpisodeNumber.toString().padStart(3, '0')}-E${episode[episode.length - 1].absoluteEpisodeNumber!.toString().padStart(3, '0')}`
+      titleSection = episode.map(e => e.title).join(' + ')
+      tvdbId = episode.reduce((acc, curr) => `${acc}[tvdbId-${curr.tvdbId}]`, '')
     } else {
       num = `E${episodeResource.episodeNumber.toString().padStart(2, '0')}`
       if (episodeResource.absoluteEpisodeNumber)
@@ -234,7 +236,7 @@ export default class EmbyMediaServer extends MediaServer {
         return true;
       }
 
-      // this.logger.info(`Link for ${linkPath} already exists`);
+      this.logger.info(`Link for ${linkPath} already exists`);
     }
     return false;
   }
