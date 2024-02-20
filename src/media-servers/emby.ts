@@ -236,7 +236,7 @@ export default class EmbyMediaServer extends MediaServer {
         return true;
       }
 
-      this.logger.info(`Link for ${linkPath} already exists`);
+      // this.logger.info(`Link for ${linkPath} already exists`);
     }
     return false;
   }
