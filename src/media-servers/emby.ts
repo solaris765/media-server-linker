@@ -30,46 +30,9 @@ export default class EmbyMediaServer extends MediaServer {
 
   episodeFileName(series: SeriesResource, episode: EpisodeResource[]) {
     const episodeResource = episode[0];
-    let customFormatsAndQuality = ''
 
     if (!episodeResource.episodeFile) {
       return '';
-    }
-    if (episodeResource.episodeFile.customFormats && episodeResource.episodeFile.customFormats?.length > 0) {
-      customFormatsAndQuality += episodeResource.episodeFile.customFormats.reduce((acc, curr) => `${acc} ${curr.name}`, '').trim()
-    }
-    if (episodeResource.episodeFile.quality?.quality?.name) {
-      customFormatsAndQuality += ` ${episodeResource.episodeFile.quality.quality.name}`
-    }
-    if (episodeResource.episodeFile.quality?.revision?.version) {
-      customFormatsAndQuality += ` v${episodeResource.episodeFile.quality.revision.version}`
-    }
-    customFormatsAndQuality = `[${customFormatsAndQuality.trim().replace(/ +/g, ' ')}]`
-
-    let videoDynamicRangeType = ''
-    if (episodeResource.mediaInfo?.videoDynamicRangeType) {
-      videoDynamicRangeType = `[${episodeResource.mediaInfo.videoDynamicRangeType}]`
-    }
-
-    let videoBitDepth = ''
-    if (episodeResource.mediaInfo?.videoBitDepth) {
-      videoBitDepth = `[${episodeResource.mediaInfo.videoBitDepth}bit]`
-    }
-    let videoCodec = ''
-    if (episodeResource.mediaInfo?.videoCodec) {
-      videoCodec = `[${episodeResource.mediaInfo.videoCodec}]`
-    }
-    let audioCodec = ''
-    if (episodeResource.mediaInfo?.audioCodec) {
-      audioCodec = `[${episodeResource.mediaInfo.audioCodec} ${episodeResource.mediaInfo.audioChannels}]`
-    }
-    let audioLanguages = ''
-    if (episodeResource.mediaInfo?.audioLanguages) {
-      audioLanguages = `[${episodeResource.mediaInfo.audioLanguages}]`
-    }
-    let releaseGroup = ''
-    if (episodeResource.episodeFile.releaseGroup) {
-      releaseGroup = `-${episodeResource.episodeFile.releaseGroup}`
     }
 
     let seriesSection = ''
@@ -100,19 +63,11 @@ export default class EmbyMediaServer extends MediaServer {
     }
 
     let fileName = ''
-    let fileNameTemplate = ''
+    let fileNameLong = ''
+    seriesSection = `${series.title} (${series.year})`
+
     switch (series.seriesType) {
       case 'anime':
-        // {Series TitleYear} - S{season:00}E{episode:00} - {absolute:000} - {Episode CleanTitle} [{Custom Formats }{Quality Full}]{[MediaInfo VideoDynamicRangeType]}[{MediaInfo VideoBitDepth}bit]{[MediaInfo VideoCodec]}[{Mediainfo AudioCodec} { Mediainfo AudioChannels}]{MediaInfo AudioLanguages}{-Release Group}
-        /**
-         * Single Episode:
-          The Series Title! (2010) - S01E01 - 001 - Episode Title 1 [iNTERNAL HDTV-720p v2][HDR10][10bit][x264][DTS 5.1][JA]-RlsGrp
-          Multi Episode:
-          The Series Title! (2010) - S01E01-E03 - 001-003 - Episode Title [iNTERNAL HDTV-720p v2][HDR10][10bit][x264][DTS 5.1][JA]-RlsGrp
-         */
-        seriesSection = `${series.title} (${series.year})`
-
-
         episodeSection = `S${episodeResource.seasonNumber.toString().padStart(2, '0')}`
         if (episodeResource.absoluteEpisodeNumber)
           episodeSection += abs
@@ -120,49 +75,20 @@ export default class EmbyMediaServer extends MediaServer {
           episodeSection += num
 
           fileName = `${seriesSection} - ${episodeSection} - ${tvdbId}`;
-          fileNameTemplate = `${seriesSection} - ${episodeSection} - $1 ${tvdbId}$2$3$4$5$6$7$8`;
+          fileNameLong = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}`;
         break;
       default:
-        /**
-         * {Series TitleYear} - S{season:00}E{episode:00} - {Episode CleanTitle} [{Custom Formats }{Quality Full}]{[MediaInfo VideoDynamicRangeType]}{[Mediainfo AudioCodec}{ Mediainfo AudioChannels]}{[MediaInfo VideoCodec]}{-Release Group}
-         * Single Episode:
-          The Series Title! (2010) - S01E01 - Episode Title 1 [AMZN WEBDL-1080p Proper][DV HDR10][DTS 5.1][x264]-RlsGrp
-          Multi Episode:
-          The Series Title! (2010) - S01E01-E03 - Episode Title [AMZN WEBDL-1080p Proper][DV HDR10][DTS 5.1][x264]-RlsGrp
-         */
-        seriesSection = `${series.title} (${series.year})`
         episodeSection = `S${episodeResource.seasonNumber.toString().padStart(2, '0')}${num}`
 
         fileName = `${seriesSection} - ${episodeSection} - ${tvdbId}`;
-        fileNameTemplate = `${seriesSection} - ${episodeSection} - $1 ${tvdbId}$2$3$6$5$8`;
+        fileNameLong = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}`;
         break;
     }
 
-    const mapping: {
-      [key: string]: string;
-    } = {
-      '$1': titleSection,
-      '$2': customFormatsAndQuality,
-      '$3': videoDynamicRangeType,
-      '$4': videoBitDepth,
-      '$5': videoCodec,
-      '$6': audioCodec,
-      '$7': audioLanguages,
-      '$8': releaseGroup,
+    if (fileNameLong.length <= 245) {
+      return fileNameLong;
     }
-    let tmp = fileNameTemplate;
-    for (const key in mapping) {
-      tmp = tmp.replace(key, mapping[key]);
-      if (tmp.length > 245) {
-        break;
-      } else {
-        fileName = tmp;
-      }
-    }
-
-    // replace remaining template variables
-    fileName = fileName.replace(/\$[0-9]/g, '');
-
+    
     return fileName;
   }
 
