@@ -107,7 +107,7 @@ export default class EmbyMediaServer extends MediaServer {
     const firstEpisode = episodeResource[0];
     if (!firstEpisode) {
       this.logger.error('No episode found');
-      return false;
+      return []
     }
 
     let realPath = ''
@@ -115,7 +115,7 @@ export default class EmbyMediaServer extends MediaServer {
       if (!firstEpisode.episodeFile?.path) {
         // This case indicates that the episode is part of a multi-episode file
         // this.logger.error(`No path found for ${firstEpisode.id}`);
-        return false;
+        return [];
       }
       realPath = firstEpisode.episodeFile.path;
     }
@@ -123,6 +123,7 @@ export default class EmbyMediaServer extends MediaServer {
     const series = firstEpisode.series;
     const linkPath = this.mediaServerPathForEpisode(series, episodeResource);
 
+    let results = [];
     for (const episode of episodeResource) {
 
       let dbEntry: DBEntry | null = null;
@@ -136,7 +137,8 @@ export default class EmbyMediaServer extends MediaServer {
       if (!dbEntry) {
         if (!realPath) {
           // this.logger.error(`Neither realPath nor savedLinkPath exist for ${episode.id}`);
-          return true;
+          results.push({ id: episode.id, result: 'No file or record found' });
+          continue;
         }
         dbEntry = DBEntry.fromDoc({
           _id: episode.id.toString(),
@@ -147,7 +149,8 @@ export default class EmbyMediaServer extends MediaServer {
         });
         await this.fileSystem.createSymLink(realPath, linkPath);
         await this.tvDb.put(dbEntry.toDoc());
-        return true;
+        results.push({ id: episode.id, result: 'Created' });
+        continue;
       }
 
       const savedLinkPath = dbEntry.mediaServers[this.mediaServerPath];
@@ -156,13 +159,15 @@ export default class EmbyMediaServer extends MediaServer {
       if (!savedLinkPath) {
         if (!realPath) {
           // this.logger.error(`Neither realPath nor savedLinkPath exist for ${episode.id}`);
-          return true;
+          results.push({ id: episode.id, result: 'No file or record found'});
+          continue;
         }
         this.logger.info(`Creating link for ${linkPath}`);
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
         await this.tvDb.put(dbEntry.toDoc());
-        return true;
+        results.push({ id: episode.id, result: 'Created' });
+        continue;
       }
 
       // if realPath doesn't exist, remove the link
@@ -172,7 +177,8 @@ export default class EmbyMediaServer extends MediaServer {
         dbEntry.realPath = '';
         delete dbEntry.mediaServers[this.mediaServerPath];
         await this.tvDb.put(dbEntry.toDoc());
-        return true;
+        results.push({ id: episode.id, result: 'Removed' });
+        continue;
       }
 
       // if the the linkPath doesn't match the dbEntry, fix it
@@ -182,17 +188,20 @@ export default class EmbyMediaServer extends MediaServer {
         await this.fileSystem.createSymLink(realPath, linkPath);
         dbEntry.mediaServers[this.mediaServerPath] = linkPath;
         await this.tvDb.put(dbEntry.toDoc());
-        return true;
+        results.push({ id: episode.id, result: 'Fixed' });
+        continue;
       }
 
       if (!await this.fileSystem.doesFileExist(linkPath)) {
         this.logger.info(`Link for ${linkPath} doesn't exist`);
         await this.fileSystem.createSymLink(realPath, linkPath);
-        return true;
+        results.push({ id: episode.id, result: 'Recreated' });
+        continue;
       }
 
       // this.logger.info(`Link for ${linkPath} already exists`);
     }
-    return false;
+    
+    return results;
   }
 }

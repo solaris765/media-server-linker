@@ -35,7 +35,7 @@ export abstract class MediaServer {
     this.movieDb = options.movieDb  || new PouchDB('moviedb', { prefix: process.env.DB_PATH });
   }
 
-  abstract linkEpisodeToLibrary(episode: EpisodeResource[]): Promise<boolean> | boolean;
+  abstract linkEpisodeToLibrary(episode: EpisodeResource[]): Promise<{id: number, result:string}[]> | {id: number, result:string}[];
 }
 
 export interface MediaServerConstructor {
