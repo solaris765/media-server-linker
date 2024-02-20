@@ -135,15 +135,16 @@ export default class EmbyMediaServer extends MediaServer {
         break;
     }
 
+    fileName = sanitize(fileName);
     if (fileName.length > 255) {
       // remove episode title
-      fileName = fileName.replace(titleSection, '');
+      fileName = fileName.replace(' - ' + titleSection, '');
       if (fileName.length > 255) {
         throw new Error(`Filename too long: ${fileName}`);
       }
     }
 
-    return sanitize(fileName);
+    return fileName;
   }
 
   mediaServerPathForEpisode(series: SeriesResource, episode: EpisodeResource[]) {
