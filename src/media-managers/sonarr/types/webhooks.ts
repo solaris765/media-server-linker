@@ -154,9 +154,12 @@ export interface WebhookGrabPayload extends WebhookEpisodeChangePayload {
   customFormatInfo: WebhookCustomFormatInfo;
 }
 
-export interface WebhookImportPayload extends WebhookEpisodeChangePayload {
-  eventType: WebhookEventType.Download;
+export interface WebhookEpisodeFileChangePayload extends WebhookEpisodeChangePayload {
   episodeFile: WebhookEpisodeFile;
+}
+
+export interface WebhookImportPayload extends WebhookEpisodeFileChangePayload {
+  eventType: WebhookEventType.Download;
   isUpgrade: boolean;
   downloadClient: string;
   downloadClientType: string;
@@ -166,9 +169,8 @@ export interface WebhookImportPayload extends WebhookEpisodeChangePayload {
   release: WebhookGrabbedRelease;
 }
 
-export interface WebhookEpisodeDeletePayload extends WebhookEpisodeChangePayload {
+export interface WebhookEpisodeDeletePayload extends WebhookEpisodeFileChangePayload {
   eventType: WebhookEventType.EpisodeFileDelete;
-  episodeFile: WebhookEpisodeFile;
   deleteReason: DeleteMediaFileReason;
 }
 

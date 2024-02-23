@@ -1,12 +1,26 @@
 import { MediaManager, type TypedResponse } from "../../types";
 import {
+  type EpisodeFileResource,
   type EpisodeResource,
-  type ParseResource,
   type SeriesResource,
 } from "./types/api"
-import { type WebhookPayload, type WebhookTestPayload, WebhookEventType, type WebhookGrabPayload, type WebhookImportPayload, type WebhookRenamePayload, type WebhookSeriesAddPayload, type WebhookSeriesDeletePayload, type WebhookEpisodeDeletePayload, type WebhookHealthPayload, type WebhookApplicationUpdatePayload, type WebhookManualInteractionPayload, type WebhookEpisodeChangePayload } from "./types/webhooks";
+import {
+  type WebhookPayload,
+  type WebhookTestPayload, WebhookEventType,
+  type WebhookGrabPayload,
+  type WebhookImportPayload,
+  type WebhookRenamePayload,
+  type WebhookSeriesAddPayload,
+  type WebhookSeriesDeletePayload,
+  type WebhookEpisodeDeletePayload,
+  type WebhookHealthPayload,
+  type WebhookApplicationUpdatePayload,
+  type WebhookManualInteractionPayload,
+  type WebhookEpisodeFileChangePayload
+} from "./types/webhooks";
 import { saveCurlToFile } from "../../util/curl";
-import { linkEpisodeToLibrary } from "../../media-servers";
+import { TvDbEntry } from "../../link-dbs";
+import { Stingray, startMarker } from "../../util/performance";
 
 function isTestEvent(eventPayload: WebhookPayload): eventPayload is WebhookTestPayload {
   return eventPayload.eventType === WebhookEventType.Test;
@@ -47,6 +61,8 @@ function isApplicationUpdateEvent(eventPayload: WebhookPayload): eventPayload is
 function isManualInteractionEvent(eventPayload: WebhookPayload): eventPayload is WebhookManualInteractionPayload {
   return eventPayload.eventType === WebhookEventType.ManualInteractionRequired;
 }
+
+
 
 class SonarrHandler extends MediaManager<WebhookPayload> {
   private async _callAPI<T>(route: string, req?: RequestInit): Promise<TypedResponse<T>> {
@@ -94,73 +110,86 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
     }
   }
 
-  async getEpisode(episodeId: number): Promise<EpisodeResource[]> {
+  async getEpisodeFileById(episodeFileId: number): Promise<EpisodeFileResource> {
+    const response = await this._callAPI(`/episodeFile/${episodeFileId}`, {
+      method: 'GET',
+    });
+
+    return response.json<EpisodeFileResource>();
+  }
+
+  async getEpisode(episodeId: number): Promise<EpisodeResource> {
     const response = await this._callAPI(
       `/episode/${episodeId}`,
       {
         method: 'GET',
       });
 
-    const ep = await response.json<EpisodeResource>();
-
-    let result: EpisodeResource[] = []
-    if (!ep) {
-      return result;
-    }
-    result = [ep];
-    if (ep.title && ep.episodeFile?.path) {
-      const episodes = await this.parse(ep.series.title, ep.episodeFile.path);
-      if (episodes.length) {
-        // filter is a precaution to remove potential null entries
-        for (const episode of episodes) {
-          if (result.find((e) => e.id === episode.id)) {
-            continue;
-          } else {
-            result.push(episode);
-          }
-        }
-      }
-    }
-
-    if (!result[0].series) {
-      // fallback to get the series
-      result[0].series = (await this.getSeries(result[0].seriesId))[0];
-    }
-
-    return result.sort((a, b) => a.seasonNumber - b.seasonNumber || a.episodeNumber - b.episodeNumber);
+    return response.json<EpisodeResource>();
   }
 
-  async parse(title: string, path: string): Promise<EpisodeResource[]> {
-    const response = await this._callAPI<{ series: SeriesResource }>(`/parse?path=${path}&title=${title}`);
-    const j: ParseResource = await response.json();
-    let episodes = [];
-    for (const epNum of j.parsedEpisodeInfo.episodeNumbers) {
-      const ep = j.episodes.find((e) => e.episodeNumber === epNum);
-      if (ep) {
-        episodes.push(ep);
-      }
-    }
-    return episodes;
+  async getEpisodeBySeriesId(seriesId: number): Promise<EpisodeResource[]> {
+    const response = await this._callAPI(
+      `/episode?seriesId=${seriesId}`,
+      {
+        method: 'GET',
+      });
+
+    const json = response.json<EpisodeResource[]>();
+    return json;
+  }
+
+  async getEpisodeByFileId(fileId: number): Promise<EpisodeResource[]> {
+    const response = await this._callAPI(
+      `/episode?episodeFileId=${fileId}`,
+      {
+        method: 'GET',
+      });
+
+    const json = response.json<EpisodeResource[]>();
+    return json;
   }
 
   async processEpisodeById(episodeId: number) {
     const episodeResource = await this.getEpisode(episodeId);
-    await linkEpisodeToLibrary(episodeResource, this.logger);
-    return true;
+    const dbRecord = await TvDbEntry.upsertEpisodeResource(episodeResource);
+    return dbRecord;
   }
 
-  async processEpisodeChanged(body: WebhookEpisodeChangePayload) {
-    for (const episode of body.episodes) {
-      const episodeResource = await this.getEpisode(episode.id);
-      this.logger.info(`Processing episode: ${episodeResource[0].title}`);
-      await linkEpisodeToLibrary(episodeResource, this.logger);
+  async processEpisodeByFileId(fileId: number) {
+    if (fileId === 0) {
+      return {
+        success: false,
+        message: '0 is not a valid file ID'
+      }
     }
+    let marker = startMarker('processEpisodeByFileId.TimePerFile');
+    marker.split('getEpisodeByFileId.start');
+    const episodeResources = await this.getEpisodeByFileId(fileId);
+    marker.split('getEpisodeByFileId.end');
+    if (episodeResources.length === 0) {
+      this.logger.warn(`No episodes found for fileId ${fileId}`);
+      return { success: false, message: `No episodes found for fileId ${fileId}` };
+    }
+    if (episodeResources.length > 1) {
+      this.logger.warn(`Found multiple episodes for fileId ${fileId}`);
+    }
+    marker.split('upsertBulkEpisodeResource.start');
+    let dbRecords = await TvDbEntry.upsertBulkEpisodeResource(episodeResources);
+    marker.split('upsertBulkEpisodeResource.end');
+    marker.endMarker();
+    return dbRecords;
+  }
 
-    return true;
+  async processEpisodeChanged(body: WebhookEpisodeFileChangePayload) {
+    return {
+      success: true,
+      data: await this.processEpisodeByFileId(body.episodeFile.id),
+    };
   }
 
   protected processGrab(body: WebhookGrabPayload) {
-    return this.processEpisodeChanged(body);
+    return this.fallbackPayloadHandler(body);
   }
   protected processImport(body: WebhookImportPayload) {
     return this.processEpisodeChanged(body);
@@ -168,7 +197,10 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
   protected processDelete(body: WebhookEpisodeDeletePayload) {
     if (body.deleteReason === 'upgrade') {
       this.logger.info(`Episode ${body.episodes[0].title} is being upgraded`);
-      return true;
+      return {
+        success: true,
+        message: `Episode ${body.episodes[0].title} is being upgraded`,
+      };
     }
     return this.processEpisodeChanged(body);
   }
@@ -184,10 +216,13 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
 
   protected fallbackPayloadHandler(body: WebhookPayload) {
     this.logger.info(`Unhandled payload: ${body.eventType}`);
-    return true;
+    return {
+      success: false,
+      message: `Unhandled payload: ${body.eventType}`,
+    };
   }
 
-  processWebhook(body: WebhookPayload) {
+  async processWebhook(body: WebhookPayload) {
     if (isGrabEvent(body)) {
       return this.processGrab(body);
     } else if (isImportEvent(body)) {
@@ -208,43 +243,49 @@ class SonarrHandler extends MediaManager<WebhookPayload> {
 
   async bulkProcess(quick?: boolean) {
     const allseries = await this.getSeries();
-    let seriesCount = 0;
-    let episodeCount = 0;
-    let failed = 0;
-    let success = 0;
+    let counters = {
+      series: 0,
+      episodes: 0,
+      success: 0,
+      skipped: 0,
+      error: 0,
+    };
     for (const series of allseries) {
-      seriesCount++;
-      const seriesRes = await this._callAPI<EpisodeResource[]>(`/episode?seriesId=${series.id}`);
-      const episodes = await seriesRes.json<EpisodeResource[]>();
+      let marker = startMarker('bulkProcess.TimePerSeries');
+      counters.series++;
+      marker.split('getEpisodeBySeriesId.start')
+      const episodes =  await this.getEpisodeBySeriesId(series.id);
+      marker.split('getEpisodeBySeriesId.end')
+
+      this.logger.info(JSON.stringify(counters));
+      this.logger.info(`Processing ${episodes.length} episodes for series ${series.title}`);
 
       let i = 0;
       for (const episode of episodes) {
         i++;
-        let isEveryFourth = i % 4 === 0;
-        if (quick && !isEveryFourth) {
+        if (quick && i > 5) break;
+        counters.episodes++;
+        if (episode.episodeFileId === 0) {
+          counters.skipped++;
           continue;
         }
-        const episodeResource = await this.getEpisode(episode.id);
-        if (episodeResource.length === 0) {
-          // skip episodes that don't have a file
-          // seems to indicate multi-episode files
-          continue;
-        }
-        episodeCount++;
-        await linkEpisodeToLibrary(episodeResource, this.logger)
-          .then(() => {
-            success++;
-          })
-          .catch((e) => {
-            failed++;
-            this.logger.error(`Error linking episode: ${e}`);
-          });
+        marker.split(`processEpisodeByFileId.start`);
+        await this.processEpisodeByFileId(episode.episodeFileId).then((record) => {
+          counters.success++;
+        }).catch((error) => {
+          this.logger.error(`Error processing episode ${episode.id}: ${JSON.stringify(error)}`);
+          counters.error++;
+        })
+        marker.split(`processEpisodeByFileId.end`);
       }
-
+      marker.endMarker();
+      this.logger.info(`Processed ${i} episodes for series ${series.title} in ${marker.duration / 1000} seconds`);
     }
-    return { seriesCount, episodeCount, failed, success };
+    return counters;
   }
 }
 
 export const name = 'sonarr';
-export default SonarrHandler;
+
+const MonitoredSonarrHandler = Stingray(SonarrHandler);
+export default MonitoredSonarrHandler;

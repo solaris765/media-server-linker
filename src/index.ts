@@ -2,12 +2,18 @@ import fastify from 'fastify';
 import { getMediaManagers } from './media-managers';
 import { saveCurlToFile } from './util/curl';
 import SonarrHandler from './media-managers/sonarr';
-import { cleanupMediaServers } from './media-servers';
+// Registers the event listener for the db
+import './media-servers';
+import { db } from './link-dbs';
+import { getPerformanceMetrics } from './util/performance';
 
 // catch signals and properly close the server
 process.on('SIGINT', async () => {
   console.log('Caught interrupt signal');
   await app.close();
+  db.close();
+
+  console.log(JSON.stringify(getPerformanceMetrics(), null, 2));
   process.exit();
 });
 
@@ -47,23 +53,33 @@ interface TVQuery {
   id: string;
   quick: 'true' | 'false';
 }
-app.get<{Querystring:TVQuery}>('/tv', async (request, reply) => {
-  const mediaMng = new SonarrHandler({
-    logger: request.log
-  });
-
-  if (request.query.id) {
-    const result = await mediaMng.processEpisodeById(Number.parseInt(request.query.id));
-    reply.send(result);
+let tvQueryRunning = false;
+app.get<{ Querystring: TVQuery }>('/tv', async (request, reply) => {
+  if (tvQueryRunning) {
+    reply.send({ message: 'Already running' });
     return;
-  } else {
-    const result = await mediaMng.bulkProcess(request.query.quick === 'true');
-    reply.send(result);
+  }
+  tvQueryRunning = true;
+  try {
+    const mediaMng = new SonarrHandler({
+      logger: request.log
+    });
+
+    if (request.query.id) {
+      const result = await mediaMng.processEpisodeById(Number.parseInt(request.query.id));
+      reply.send(result);
+      return;
+    } else {
+      const result = await mediaMng.bulkProcess(request.query.quick === 'true');
+      reply.send(result);
+    }
+  } finally {
+    tvQueryRunning = false;
   }
 });
 
 app.get('/cleanup', async (request, reply) => {
-  await cleanupMediaServers(request.log);
+  // await cleanupMediaServers(request.log);
 
   reply.send({ success: true });
 });

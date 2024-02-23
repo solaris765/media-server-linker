@@ -3,8 +3,8 @@ import type { Logger } from "../types";
 import fs from "fs/promises";
 import path from "path";
 import { createSymLink, doesFileExist, removeLink, getFilesFromMediaPath} from "../util/filesystem";
-import type { MinDBImplementation } from "../link-dbs";
-import PouchDB from "pouchdb";
+import { DB_EVENT_EMITTER } from "../link-dbs";
+import  { TvDbEntry } from "../link-dbs";
 
 interface MinFSImplementation {
   createSymLink: (target: string, linkPath: string) => Promise<void>;
@@ -14,8 +14,6 @@ interface MinFSImplementation {
 
 export interface MediaServerOptions {
   logger: Logger;
-  tvDb?: MinDBImplementation;
-  movieDb?: MinDBImplementation;
   fileSystem?: MinFSImplementation
 }
 export abstract class MediaServer {
@@ -25,17 +23,13 @@ export abstract class MediaServer {
   abstract mediaServerPath: string;
 
   protected fileSystem: MinFSImplementation
-  tvDb: MinDBImplementation;
-  movieDb: MinDBImplementation;
 
   constructor(options: MediaServerOptions) {
     this.logger = options.logger;
     this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
-    this.tvDb = options.tvDb || new PouchDB('tvdb', { prefix: process.env.DB_PATH });
-    this.movieDb = options.movieDb  || new PouchDB('moviedb', { prefix: process.env.DB_PATH });
   }
 
-  abstract linkEpisodeToLibrary(episode: EpisodeResource[]): Promise<{id: number, result:string}[]> | {id: number, result:string}[];
+  abstract linkEpisodeToLibrary(episode: TvDbEntry): Promise<{id: string, result:string}> | {id: string, result:string};
 }
 
 export interface MediaServerConstructor {
@@ -69,65 +63,13 @@ async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
   return mediaServers;
 }
 
-export async function linkEpisodeToLibrary(
-  episode: EpisodeResource[],
-  logger: Logger,
-): Promise<boolean> {
-  const mediaServers = await getMediaServers(logger);
-
-  let success = true;
+DB_EVENT_EMITTER.on('tv', async (doc: TvDbEntry) => {
+  const mediaServers = await getMediaServers(console);
   for (const mediaServer of mediaServers) {
     try {
-      await mediaServer.linkEpisodeToLibrary(episode);
+      await mediaServer.linkEpisodeToLibrary(doc);
     } catch (e) {
-      logger.error(`Error linking episode to ${mediaServer.mediaServerPath}: ${e}`);
-      success = false;
+      console.error(`Error linking episode to ${mediaServer.mediaServerPath}: ${e}`);
     }
   }
-  return success;
-}
-
-export async function cleanupMediaServers(
-  logger: Logger,
-): Promise<boolean> {
-  const mediaServers = await getMediaServers(logger);
-
-  let success = true;
-  for (const mediaServer of mediaServers) {
-    if (!mediaServer) {
-      continue;
-    }
-    const mediaServerPath = path.resolve(mediaServer.mediaRootPath, mediaServer.mediaServerPath)    
-    const librarys = await fs.readdir(mediaServerPath);
-    for (const library of librarys) {
-      const libraryPath = path.resolve(mediaServerPath, library);
-      const files = await getFilesFromMediaPath(libraryPath);
-      for (const file of files) {
-        let isInTVDb = await mediaServer.tvDb?.find({
-          selector: {
-            mediaServers: {
-              [mediaServer.mediaServerPath]: file
-            }
-          }
-        });
-        let isInMovieDb = await mediaServer.movieDb?.find({
-          selector: {
-            mediaServers: {
-              [mediaServer.mediaServerPath]: file
-            }
-          }
-        });
-        if (isInTVDb.docs.length === 0 && isInMovieDb.docs.length === 0) {
-          try {
-            logger.info(`Removing link: ${file}`);
-            // await fs.unlink(file);
-          } catch (e) {
-            logger.error(`Error removing link: ${e}`);
-            success = false;
-          }
-        }
-      }
-    }
-  }
-  return success;
-}
+});

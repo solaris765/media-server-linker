@@ -1,5 +1,6 @@
 import { MediaServer } from ".";
-import { DBEntry } from "../link-dbs";
+import { default as SonarrHandler } from "../media-managers/sonarr";
+import type { TvDbEntry } from "../link-dbs";
 import type { EpisodeResource, SeriesResource } from "../media-managers/sonarr/types/api";
 import filenamify from 'filenamify';
 
@@ -74,8 +75,8 @@ export default class EmbyMediaServer extends MediaServer {
         else
           episodeSection += num
 
-          fileName = `${seriesSection} - ${episodeSection} - ${tvdbId}`;
-          fileNameLong = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}`;
+        fileName = `${seriesSection} - ${episodeSection} - ${tvdbId}`;
+        fileNameLong = `${seriesSection} - ${episodeSection} - ${titleSection} ${tvdbId}`;
         break;
       default:
         episodeSection = `S${episodeResource.seasonNumber.toString().padStart(2, '0')}${num}`
@@ -88,18 +89,29 @@ export default class EmbyMediaServer extends MediaServer {
     if (fileNameLong.length <= 245) {
       return fileNameLong;
     }
-    
+
     return fileName;
   }
 
-  mediaServerPathForEpisode(series: SeriesResource, episode: EpisodeResource[]) {
-    const episodeResource = episode[0];
-    const libraryDir = this.libraryDir(episodeResource);
+  async mediaServerPathForEpisode(doc: TvDbEntry) {
+    const sonarrHandler = new SonarrHandler({ logger: this.logger });
+    let eps: EpisodeResource[] = []
+    for (const episodeId of doc.episodeIds) {
+      const episode = await sonarrHandler.getEpisode(episodeId);
+      eps.push(episode);
+    }
+    if (eps.length === 0) {
+      throw new Error('No episodes found');
+    }
+    // We can assume that all episodes are from the same series
+    let series = eps[0].series;
+
+    const libraryDir = this.libraryDir(eps[0]);
     const seriesFolder = this.seriesFolderName(series);
-    const seasonFolder = this.seasonFolderName(episodeResource.seasonNumber);
-    const episodeFile = this.episodeFileName(series, episode);
-    const extention = episodeResource.episodeFile?.path?.split('.').pop();
-    const filename = filenamify(episodeFile + '.' + extention, { replacement: ' ', maxLength: 255});
+    const seasonFolder = this.seasonFolderName(eps[0].seasonNumber);
+    const episodeFile = this.episodeFileName(series, eps);
+    const extention = eps[0].episodeFile?.path?.split('.').pop();
+    const filename = filenamify(episodeFile + '.' + extention, { replacement: ' ', maxLength: 255 });
 
     const finalFile = `${this.mediaRootPath}/${this.mediaServerPath}/${libraryDir}/${seriesFolder}/${seasonFolder}/${filename}`;
     if (finalFile.includes('undefined')) {
@@ -114,105 +126,58 @@ export default class EmbyMediaServer extends MediaServer {
     return finalFile;
   }
 
-  async linkEpisodeToLibrary(episodeResource: EpisodeResource[]) {
-    const firstEpisode = episodeResource[0];
-    if (!firstEpisode) {
-      this.logger.error('No episode found');
-      return []
+  async linkEpisodeToLibrary(doc: TvDbEntry): Promise<{id: string, result:string}> {
+    const linkPath = await this.mediaServerPathForEpisode(doc);
+
+    const mediaSrvSavedPath = doc.mediaServers[this.mediaServerPath];
+    let mediaSrvSavedPathExists = false;
+    if (mediaSrvSavedPath) {
+      mediaSrvSavedPathExists = await this.fileSystem.doesFileExist(mediaSrvSavedPath);
     }
 
-    let realPath = ''
-    if (firstEpisode.hasFile) {
-      if (!firstEpisode.episodeFile?.path) {
-        // This case indicates that the episode is part of a multi-episode file
-        // this.logger.error(`No path found for ${firstEpisode.id}`);
-        return [];
+    // Clean up the link if the file doesn't exist
+    if (!doc.dataPath) {
+      if (mediaSrvSavedPathExists) {
+        this.logger.info(`Removing link for ${mediaSrvSavedPath}`);
+        await this.fileSystem.removeLink(mediaSrvSavedPath);
+        delete doc.mediaServers[this.mediaServerPath];
+        await doc.save(false);
+        return { id: doc._id, result: 'Removed' };
+      } else if (mediaSrvSavedPath) {
+        this.logger.info(`Link for ${mediaSrvSavedPath} doesn't exist`);
+        delete doc.mediaServers[this.mediaServerPath];
+        await doc.save(false);
+        return { id: doc._id, result: 'Removed' };
+      } else {
+        return { id: doc._id, result: 'No file or record found' };
       }
-      realPath = firstEpisode.episodeFile.path;
     }
 
-    const series = firstEpisode.series;
-    const linkPath = this.mediaServerPathForEpisode(series, episodeResource);
-
-    let results = [];
-    for (const episode of episodeResource) {
-
-      let dbEntry: DBEntry | null = null;
-      try {
-        dbEntry = DBEntry.fromDoc(await this.tvDb.get(episode.id.toString()));
-      } catch (e) {
-        // this.logger.info(`No entry found for ${episode.id}`);
-      }
-
-      // if the entry doesn't exist, go ahead and create it
-      if (!dbEntry) {
-        if (!realPath) {
-          // this.logger.error(`Neither realPath nor savedLinkPath exist for ${episode.id}`);
-          results.push({ id: episode.id, result: 'No file or record found' });
-          continue;
-        }
-        dbEntry = DBEntry.fromDoc({
-          _id: episode.id.toString(),
-          realPath,
-          mediaServers: {
-            [this.mediaServerPath]: linkPath,
-          }
-        });
-        await this.fileSystem.createSymLink(realPath, linkPath);
-        await this.tvDb.put(dbEntry.toDoc());
-        results.push({ id: episode.id, result: 'Created' });
-        continue;
-      }
-
-      const savedLinkPath = dbEntry.mediaServers[this.mediaServerPath];
-
-      // if the linkFile doesn't exist
-      if (!savedLinkPath) {
-        if (!realPath) {
-          // this.logger.error(`Neither realPath nor savedLinkPath exist for ${episode.id}`);
-          results.push({ id: episode.id, result: 'No file or record found'});
-          continue;
-        }
-        this.logger.info(`Creating link for ${linkPath}`);
-        await this.fileSystem.createSymLink(realPath, linkPath);
-        dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-        await this.tvDb.put(dbEntry.toDoc());
-        results.push({ id: episode.id, result: 'Created' });
-        continue;
-      }
-
-      // if realPath doesn't exist, remove the link
-      if (!await this.fileSystem.doesFileExist(realPath)) {
-        this.logger.info(`Removing link for ${linkPath}`);
-        await this.fileSystem.removeLink(savedLinkPath);
-        dbEntry.realPath = '';
-        delete dbEntry.mediaServers[this.mediaServerPath];
-        await this.tvDb.put(dbEntry.toDoc());
-        results.push({ id: episode.id, result: 'Removed' });
-        continue;
-      }
-
-      // if the the linkPath doesn't match the dbEntry, fix it
-      if (linkPath !== savedLinkPath) {
-        this.logger.info(`Fixing link for ${linkPath}\nWas ${savedLinkPath}`);
-        await this.fileSystem.removeLink(savedLinkPath);
-        await this.fileSystem.createSymLink(realPath, linkPath);
-        dbEntry.mediaServers[this.mediaServerPath] = linkPath;
-        await this.tvDb.put(dbEntry.toDoc());
-        results.push({ id: episode.id, result: 'Fixed' });
-        continue;
-      }
-
-      if (!await this.fileSystem.doesFileExist(linkPath)) {
-        this.logger.info(`Link for ${linkPath} doesn't exist`);
-        await this.fileSystem.createSymLink(realPath, linkPath);
-        results.push({ id: episode.id, result: 'Recreated' });
-        continue;
-      }
-
-      // this.logger.info(`Link for ${linkPath} already exists`);
+    // If the file exists and the link is correct, do nothing
+    if (mediaSrvSavedPathExists && mediaSrvSavedPath === linkPath) {
+      return { id: doc._id, result: 'Exists' };
     }
-    
-    return results;
+
+    // If the file exists and the link is incorrect, remove the link and create a new one
+    if (mediaSrvSavedPathExists && mediaSrvSavedPath !== linkPath) {
+      this.logger.info(`Removing link for ${mediaSrvSavedPath}`);
+      await this.fileSystem.removeLink(mediaSrvSavedPath);
+      this.logger.info(`Creating link for ${linkPath}`);
+      await this.fileSystem.createSymLink(doc.dataPath, linkPath);
+      doc.mediaServers[this.mediaServerPath] = linkPath;
+      await doc.save(false);
+      return { id: doc._id, result: 'Updated' };
+    }
+
+    // If the file doesn't exist, create a new link
+    if (!mediaSrvSavedPathExists) {
+      this.logger.info(`Creating link for ${linkPath}`);
+      await this.fileSystem.createSymLink(doc.dataPath, linkPath);
+      doc.mediaServers[this.mediaServerPath] = linkPath;
+      await doc.save(false);
+      return { id: doc._id, result: 'Created' };
+    }
+
+    return { id: doc._id, result: 'Unknown' };
   }
 }

@@ -8,8 +8,7 @@
     "start": "bun src/index.ts"
   },
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/pouchdb": "^6.4.2"
+    "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"
@@ -19,8 +18,6 @@
     "fastify": "^4.26.0",
     "filenamify": "^6.0.0",
     "glob": "^10.3.10",
-    "pouchdb": "^8.0.1",
-    "pouchdb-find": "^8.0.1",
     "sanitize-filename": "^1.6.3"
   }
 }

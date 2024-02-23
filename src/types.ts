@@ -11,12 +11,18 @@ export interface MediaManagerOptions {
   logger: Logger;
 }
 
+export interface WebhookHandlerResponse {
+  success: boolean;
+  message?: string;
+  data?: any;
+}
+
 export abstract class MediaManager<WebhookPayloadBase> {
   protected logger: Logger;
   constructor(options: { logger: Logger}) {
     this.logger = options.logger;
   }
-  abstract processWebhook(body: WebhookPayloadBase): Promise<boolean> | boolean;
+  abstract processWebhook(body: WebhookPayloadBase): Promise<WebhookHandlerResponse>
 }
 export interface MediaManagerConstructor {
   new (options: MediaManagerOptions): MediaManager<unknown>;
