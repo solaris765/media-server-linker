@@ -5,7 +5,7 @@ import type { EpisodeResource, SeriesResource } from "../media-managers/sonarr/t
 import filenamify from 'filenamify';
 
 export default class EmbyMediaServer extends MediaServer {
-  mediaServerPath: string = 'emby2';
+  mediaServerPath: string = 'emby';
 
   libraryDir(episode: EpisodeResource) {
     const fullPath = episode.episodeFile?.path;
