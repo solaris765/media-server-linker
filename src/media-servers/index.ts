@@ -1,9 +1,6 @@
-import type { EpisodeResource } from "../media-managers/sonarr/types/api";
 import type { Logger } from "../types";
 import fs from "fs/promises";
-import path from "path";
 import { createSymLink, doesFileExist, removeLink, getFilesFromMediaPath} from "../util/filesystem";
-import { DB_EVENT_EMITTER } from "../link-dbs";
 import  { TvDbEntry } from "../link-dbs";
 
 interface MinFSImplementation {
@@ -29,7 +26,7 @@ export abstract class MediaServer {
     this.fileSystem = options.fileSystem || { createSymLink, doesFileExist, removeLink };
   }
 
-  abstract linkEpisodeToLibrary(episode: TvDbEntry): Promise<{id: string, result:string}> | {id: string, result:string};
+  abstract linkEpisodeToLibrary(episode: TvDbEntry): Promise<{id: number, result:string}> | {id: string, result:string};
 }
 
 export interface MediaServerConstructor {
@@ -63,7 +60,7 @@ async function getMediaServers(logger: Logger): Promise<MediaServer[]> {
   return mediaServers;
 }
 
-DB_EVENT_EMITTER.on('tv', async (doc: TvDbEntry) => {
+export async function linkEpisodeToLibrary(doc: TvDbEntry, console: Logger) {
   const mediaServers = await getMediaServers(console);
   for (const mediaServer of mediaServers) {
     try {
@@ -72,4 +69,4 @@ DB_EVENT_EMITTER.on('tv', async (doc: TvDbEntry) => {
       console.error(`Error linking episode to ${mediaServer.mediaServerPath}: ${e}`);
     }
   }
-});
+}

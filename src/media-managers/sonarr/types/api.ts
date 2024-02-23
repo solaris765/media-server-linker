@@ -250,7 +250,7 @@ export interface EpisodeResource {
   hasFile: boolean;
 }
 
-enum QualitySource {
+export enum QualitySource {
   unknown = "unknown",
   television = "television",
   televisionRaw = "televisionRaw",

@@ -177,3 +177,4 @@ sonarrDB/*
 local-scripts/*
 data
 tmp
+__tests__/__fixtures__/media

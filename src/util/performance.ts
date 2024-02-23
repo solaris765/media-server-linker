@@ -103,6 +103,9 @@ export function Stingray<T extends new (...args: any[]) => any>(monitorTarget: T
 export function Stingray<T extends Function>(monitorTarget: T): T;
 export function Stingray<T extends object>(monitorTarget: T): T;
 export function Stingray<T extends object>(monitorTarget: T): T {
+  if (process.env.STINGRAY !== 'true') {
+    return monitorTarget;
+  }
   if (isClass(monitorTarget)) {
     if (monitorTarget.prototype.__stingray) {
       return monitorTarget;

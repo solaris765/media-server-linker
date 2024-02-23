@@ -129,12 +129,12 @@ export default class EmbyMediaServer extends MediaServer {
     return finalFile;
   }
 
-  async linkEpisodeToLibrary(doc: TvDbEntry): Promise<{id: string, result:string}> {
+  async linkEpisodeToLibrary(doc: TvDbEntry): Promise<{id: number, result:string}> {
     const linkPath = await this.mediaServerPathForEpisode(doc);
 
-    const mediaSrvSavedPath = doc.mediaServers[this.mediaServerPath];
+    const mediaSrvSavedPath = await doc.getMediaServerPath(this.mediaServerPath);
     let mediaSrvSavedPathExists = false;
-    if (mediaSrvSavedPath) {
+    if (mediaSrvSavedPath !== null) {
       mediaSrvSavedPathExists = await this.fileSystem.doesFileExist(mediaSrvSavedPath);
     }
 
@@ -142,34 +142,36 @@ export default class EmbyMediaServer extends MediaServer {
     if (!doc.dataPath) {
       if (mediaSrvSavedPathExists) {
         this.logger.info(`Removing link for ${mediaSrvSavedPath}`);
-        await this.fileSystem.removeLink(mediaSrvSavedPath);
+        if (mediaSrvSavedPath)
+          await this.fileSystem.removeLink(mediaSrvSavedPath);
         delete doc.mediaServers[this.mediaServerPath];
         await doc.save(false);
-        return { id: doc._id, result: 'Removed' };
+        return { id: doc.fileId!, result: 'Removed' };
       } else if (mediaSrvSavedPath) {
         this.logger.info(`Link for ${mediaSrvSavedPath} doesn't exist`);
         delete doc.mediaServers[this.mediaServerPath];
         await doc.save(false);
-        return { id: doc._id, result: 'Removed' };
+        return { id: doc.fileId!, result: 'Removed' };
       } else {
-        return { id: doc._id, result: 'No file or record found' };
+        return { id: doc.fileId!, result: 'No file or record found' };
       }
     }
 
     // If the file exists and the link is correct, do nothing
     if (mediaSrvSavedPathExists && mediaSrvSavedPath === linkPath) {
-      return { id: doc._id, result: 'Exists' };
+      return { id: doc.fileId!, result: 'Exists' };
     }
 
     // If the file exists and the link is incorrect, remove the link and create a new one
     if (mediaSrvSavedPathExists && mediaSrvSavedPath !== linkPath) {
       this.logger.info(`Removing link for ${mediaSrvSavedPath}`);
-      await this.fileSystem.removeLink(mediaSrvSavedPath);
+      if (mediaSrvSavedPath)
+          await this.fileSystem.removeLink(mediaSrvSavedPath);
       this.logger.info(`Creating link for ${linkPath}`);
       await this.fileSystem.createSymLink(doc.dataPath, linkPath);
       doc.mediaServers[this.mediaServerPath] = linkPath;
       await doc.save(false);
-      return { id: doc._id, result: 'Updated' };
+      return { id: doc.fileId!, result: 'Updated' };
     }
 
     // If the file doesn't exist, create a new link
@@ -178,9 +180,9 @@ export default class EmbyMediaServer extends MediaServer {
       await this.fileSystem.createSymLink(doc.dataPath, linkPath);
       doc.mediaServers[this.mediaServerPath] = linkPath;
       await doc.save(false);
-      return { id: doc._id, result: 'Created' };
+      return { id: doc.fileId!, result: 'Created' };
     }
 
-    return { id: doc._id, result: 'Unknown' };
+    return { id: doc.fileId!, result: 'Unknown' };
   }
 }

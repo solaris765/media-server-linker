@@ -17,8 +17,7 @@ process.on('SIGINT', async () => {
   process.exit();
 });
 
-const app = fastify({ logger: true });
-
+export const app = fastify({ logger: true });
 
 app.get('/', async (request, reply) => {
   reply.send({ hello: 'world' });

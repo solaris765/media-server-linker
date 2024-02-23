@@ -3,3 +3,4 @@ auto = true
 
 [test]
 root = "./__tests__"
+preload = ["./setup.ts"]

@@ -62,8 +62,6 @@ function isManualInteractionEvent(eventPayload: WebhookPayload): eventPayload is
   return eventPayload.eventType === WebhookEventType.ManualInteractionRequired;
 }
 
-
-
 class SonarrHandler extends MediaManager<WebhookPayload> {
   private async _callAPI<T>(route: string, req?: RequestInit): Promise<TypedResponse<T>> {
     const API = (process.env.SONARR_BASE_URL as string).replace(/\/$/, '');
