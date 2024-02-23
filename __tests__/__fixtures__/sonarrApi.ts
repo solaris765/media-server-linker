@@ -37,16 +37,16 @@ export function generateSeries(options: GenerateSeriesOptions = {seasonCount:3,e
   }
 
   const series: SeriesResource = {
-    id: faker.number.int(),
+    id: faker.number.int({min:1,max:10000}),
     title,
     added: faker.date.recent(),
     seasonFolder: true,
     monitored: true,
     useSceneNumbering: true,
     runtime: 60,
-    tvdbId: faker.number.int(),
-    tvRageId: faker.number.int(),
-    tvMazeId: faker.number.int(),
+    tvdbId: faker.number.int({min:1,max:10000}),
+    tvRageId: faker.number.int({min:1,max:10000}),
+    tvMazeId: faker.number.int({min:1,max:10000}),
     firstAired: faker.date.past(),
     path: path.resolve(DATA_DIR, options.libraryDir, title),
     qualityProfileId: 1,
@@ -115,7 +115,7 @@ export function generateEpisodesForSeries(series: SeriesResource, options: Gener
         isMultiEpisode = true;
         if (j === multiEpisodeRange[0]) {
           multiEpisode.path = filePath
-          multiEpisode.fileId = faker.number.int();
+          multiEpisode.fileId = faker.number.int({min:1,max:10000});
         }
       }
       episodes.push(generateEpisode({
@@ -123,8 +123,8 @@ export function generateEpisodesForSeries(series: SeriesResource, options: Gener
         seasonNumber: i,
         episodeNumber: j,
         absoluteEpisodeNumber,
-        filePath,
-        fileId: isMultiEpisode ? multiEpisode.fileId : faker.number.int()
+        filePath: isMultiEpisode ? multiEpisode.path : filePath,
+        fileId: isMultiEpisode ? multiEpisode.fileId : faker.number.int({min:1,max:10000})
       }));
 
       absoluteEpisodeNumber++;
@@ -146,7 +146,7 @@ export function generateEpisode(options: GenerateEpisodeOptions): EpisodeResourc
   mkdirSync(path.dirname(options.filePath), { recursive: true });
   writeFileSync(options.filePath, new Uint8Array(0));
   return {
-    id: faker.number.int(),
+    id: faker.number.int({min:1,max:10000}),
     seriesId: options.series.id,
     seasonNumber: options.seasonNumber,
     episodeNumber: options.episodeNumber,
@@ -160,16 +160,16 @@ export function generateEpisode(options: GenerateEpisodeOptions): EpisodeResourc
     episodeFileId: options.fileId,
     finaleType: 'season',
     mediaInfo: {
-      id: faker.number.int(),
-      audioBitrate: faker.number.int(),
-      audioChannels: faker.number.int(),
+      id: faker.number.int({min:1,max:10000}),
+      audioBitrate: faker.number.int({min:1,max:10000}),
+      audioChannels: faker.number.int({min:1,max:10000}),
       audioCodec: faker.datatype.boolean() ? null : faker.lorem.word(),
       audioLanguages: faker.datatype.boolean() ? null : faker.lorem.word(),
-      audioStreamCount: faker.number.int(),
-      videoBitDepth: faker.number.int(),
-      videoBitrate: faker.number.int(),
+      audioStreamCount: faker.number.int({min:1,max:10000}),
+      videoBitDepth: faker.number.int({min:1,max:10000}),
+      videoBitrate: faker.number.int({min:1,max:10000}),
       videoCodec: faker.datatype.boolean() ? null : faker.lorem.word(),
-      videoFps: faker.number.int(),
+      videoFps: faker.number.int({min:1,max:10000}),
       videoDynamicRange: faker.datatype.boolean() ? null : faker.lorem.word(),
       videoDynamicRangeType: faker.datatype.boolean() ? null : faker.lorem.word(),
       resolution: faker.datatype.boolean() ? null : faker.lorem.word(),
@@ -180,14 +180,14 @@ export function generateEpisode(options: GenerateEpisodeOptions): EpisodeResourc
     qualityCutoffNotMet: false,
     series: options.series,
     runtime: 60,
-    tvdbId: faker.number.int(),
+    tvdbId: faker.number.int({min:1,max:10000}),
     episodeFile: {
       languages: [],
       relativePath: relativePath,
       releaseGroup: faker.word.noun(),
       sceneName: faker.word.noun(),
       seasonNumber: options.seasonNumber,
-      size: faker.number.int(),
+      size: faker.number.int({min:1,max:10000}),
       seriesId: options.series.id,
       customFormats: [],
       dateAdded: faker.date.recent().toString(),
@@ -195,10 +195,10 @@ export function generateEpisode(options: GenerateEpisodeOptions): EpisodeResourc
       path: options.filePath,
       quality: {
         quality: {
-          id: faker.number.int(),
+          id: faker.number.int({min:1,max:10000}),
           name: faker.word.words(3),
           source: faker.helpers.arrayElement(Object.keys(QualitySource)) as QualitySource,
-          resolution: faker.number.int(),
+          resolution: faker.number.int({min:1,max:10000}),
         },
         revision: {
           version: 1,

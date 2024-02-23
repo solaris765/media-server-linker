@@ -5,7 +5,7 @@
   "scripts": {
     "prestart": "kill $(lsof -t -i:3000) || true",
     "dev": "bun run --watch src/index.ts",
-    "start": "bun src/index.ts"
+    "build": "docker build -t media-srv-linker ."
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

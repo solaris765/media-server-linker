@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import { generateEpisode, generateEpisodesForSeries, generateSeries } from './__fixtures__/sonarrApi';
 
 const EMBY_DIR = path.resolve(process.env.MEDIA_ROOT_PATH!, process.env.MEDIA_SOURCE_DIR!);
+fs.mkdir(EMBY_DIR, { recursive: true });
 
 interface SonarrRoutes {
   [route: string]: {
@@ -75,7 +76,7 @@ describe('e2e', () => {
   });
 
   describe('GET /tv', () => {
-    it.skip('should return 200', async () => {
+    it('should return 200', async () => {
       let series = generateSeries();
       let episodes = generateEpisodesForSeries(series);
       sonarrRoutes['/series'].handler.mockImplementation((req,reply)=>{
@@ -108,16 +109,15 @@ describe('e2e', () => {
         const row = stmt.get(episode.id);
 
         expect(row).toEqual({
-          _id: `tv-${episode.id}`,
           episodeId: episode.id,
           fileId: episode.episodeFileId,
           dataPath: episode.episodeFile?.path,
         });
 
-        const stmt2 = db.prepare('SELECT * FROM tv_media_servers WHERE fileId = ?');
-        const rows = stmt2.get(episode.episodeFileId);
+        const stmt2 = db.prepare('SELECT * FROM tv_media_servers WHERE fileId = ? AND mediaServerPath = ?');
+        const rows = stmt2.all(episode.episodeFileId, 'emby');
         expect(rows).toEqual([{
-          _id: `tv-${episode.id}`,
+          fileId: episode.episodeFileId.toString(),
           mediaServerPath: 'emby',
           path: expect.any(String)
         }]);
