@@ -17,20 +17,11 @@ db.exec("PRAGMA journal_mode = WAL;");
 
 interface TvTable {
   _id: string;
+  episodeId: number;
   fileId: number;
   dataPath?: string;
 }
-db.run("CREATE TABLE IF NOT EXISTS tv (_id TEXT PRIMARY KEY NOT NULL, fileId INTEGER, dataPath TEXT)");
-interface TvFileIdsTable {
-  _id: string;
-  fileId: number;
-}
-db.run("CREATE TABLE IF NOT EXISTS tv_file_ids (_id TEXT NOT NULL, fileId INTEGER NOT NULL, PRIMARY KEY (_id, fileId))");
-interface TvEpisodeIdsTable {
-  _id: string;
-  episodeId: number;
-}
-db.run("CREATE TABLE IF NOT EXISTS tv_episode_ids (_id TEXT NOT NULL, episodeId INTEGER NOT NULL, PRIMARY KEY (_id, episodeId))");
+db.run("CREATE TABLE IF NOT EXISTS tv (_id TEXT NOT NULL, episodeId INTEGER NOT NULL, fileId INTEGER, dataPath TEXT, PRIMARY KEY (_id, episodeId))");
 interface TvMediaServersTable {
   _id: string;
   mediaServerPath: string;
@@ -41,7 +32,6 @@ db.run("CREATE TABLE IF NOT EXISTS tv_media_servers (_id TEXT NOT NULL, mediaSer
 export interface DBEntryLike {
   _id: string;
   fileId?: number;
-  oldFileIds: number[];
   _rev?: string;
   dataPath?: string;
   episodeIds: number[];
@@ -55,11 +45,8 @@ class DBEntry {
     return this._fileId;
   }
   public set fileId(value: number | undefined) {
-    if (this._fileId !== undefined)
-      this.oldFileIds.add(this._fileId);
     this._fileId = value;
   }
-  private oldFileIds: Set<number>
   _rev?: string;
   dataPath?: string;
   episodeIds: Set<number>;
@@ -70,7 +57,6 @@ class DBEntry {
     this._id = entry._id;
     this._rev = entry._rev;
     this._fileId = entry.fileId;
-    this.oldFileIds = new Set(entry.oldFileIds);
     this.dataPath = entry.dataPath;
     this.episodeIds = new Set(entry.episodeIds);
     this.mediaServers = entry.mediaServers;
@@ -83,18 +69,9 @@ class DBEntry {
     // table tv_episode_ids: _id, episodeId
     // table tv_media_servers: _id, mediaServerPath, path
     
-    // table tv: _id, fileId, dataPath -> upsert
-    db.exec(`INSERT INTO tv (_id, fileId, dataPath) VALUES (?, ?, ?) ON CONFLICT (_id) DO UPDATE SET fileId = ?, dataPath = ?`, [this._id, this.fileId || null, this.dataPath || null, this.fileId || null, this.dataPath || null]);
-
-
-    // table tv_file_ids: _id, fileId -> batch upsert
-    for (const fileId of this.oldFileIds) {
-      db.exec(`INSERT INTO tv_file_ids (_id, fileId) VALUES ('${this._id}', ${fileId}) ON CONFLICT (_id, fileId) DO NOTHING`);
-    }
-
-    // table tv_episode_ids: _id, episodeId -> batch upsert
+    // table tv: _id, fileId, dataPath -> upsert    
     for (const episodeId of this.episodeIds) {
-      db.exec(`INSERT INTO tv_episode_ids (_id, episodeId) VALUES ('${this._id}', ${episodeId}) ON CONFLICT (_id, episodeId) DO NOTHING`);
+    db.exec(`INSERT INTO tv (_id, episodeId, fileId, dataPath) VALUES (?, ?, ?, ?) ON CONFLICT (_id, episodeId) DO UPDATE SET fileId = ?, dataPath = ?`, [this._id, episodeId, this._fileId!, this.dataPath || null, this._fileId!, this.dataPath || null]);
     }
 
     // table tv_media_servers: _id, mediaServerPath, path -> batch upsert
@@ -110,27 +87,14 @@ class DBEntry {
   }
 }
 
-const t = DBEntry;
-const tt = new DBEntry('tv', { _id: 'tv-1', oldFileIds: [], episodeIds: [], mediaServers: {} });
-function test(t: DBEntry) {
-  tt.dataPath
-}
-function test2(t: typeof DBEntry) {
-  t.fromDoc({ _id: 'tv-1', oldFileIds: [], episodeIds: [], mediaServers: {} });
-}
-function test3<T extends new (...args: any[]) => any>(t: T): T {
-  return t;
-}
-test3(DBEntry).fromDoc({ _id: 'tv-1', oldFileIds: [], episodeIds: [], mediaServers: {} });
-
 class _TvDbEntry extends DBEntry {
   constructor(entry: DBEntryLike) {
     super('tv', entry);
   }
 
   static async findByEpisodeId(episodeId: number): Promise<DBEntry | null> {
-    const stmt = db.query(`SELECT * FROM tv_episode_ids WHERE episodeId = ?`);
-    const items = stmt.all(episodeId) as TvEpisodeIdsTable[];
+    const stmt = db.query(`SELECT * FROM tv WHERE episodeId = ?`);
+    const items = stmt.all(episodeId) as TvTable[];
 
     if (items.length > 1) {
       console.warn(`Found multiple entries for episodeId ${episodeId}`);
@@ -140,21 +104,18 @@ class _TvDbEntry extends DBEntry {
 
     const item = items[0];
     // join tables tv_episode_ids, tv, tv_file_ids, tv_media_servers even if tv_file_ids and tv_media_servers are empty
-    const tv = db.query(`
-      SELECT * FROM tv 
-      LEFT JOIN tv_file_ids ON tv._id = tv_file_ids._id
-      LEFT JOIN tv_media_servers ON tv._id = tv_media_servers._id
+    const tvStmt = db.query(`
+      SELECT * tv_media_servers
       WHERE tv._id = ?
     `);
-    const restOfIt = tv.all(item._id) as (TvTable & TvFileIdsTable & TvMediaServersTable)[];
+    const mediaSrvs = tvStmt.all(item._id) as (TvMediaServersTable)[];
 
     return new _TvDbEntry({
       _id: item._id,
-      fileId: restOfIt[0].fileId,
-      oldFileIds: restOfIt.map(i => i.fileId),
+      fileId: item.fileId,
       episodeIds: items.map(i => i.episodeId),
-      dataPath: restOfIt[0].dataPath,
-      mediaServers: Object.fromEntries(restOfIt.map(i => [i.mediaServerPath, i.path]))
+      dataPath: item.dataPath,
+      mediaServers: Object.fromEntries(mediaSrvs.map(i => [i.mediaServerPath, i.path]))
     });
   }
 
@@ -169,42 +130,36 @@ class _TvDbEntry extends DBEntry {
     }
 
     const item = items[0];
-    // join tables tv_episode_ids, tv, tv_file_ids, tv_media_servers even if tv_file_ids and tv_media_servers are empty
-    const tv = db.query(`
-      SELECT * FROM tv 
-      LEFT JOIN tv_episode_ids ON tv._id = tv_episode_ids._id
-      LEFT JOIN tv_file_ids ON tv._id = tv_file_ids._id
-      LEFT JOIN tv_media_servers ON tv._id = tv_media_servers._id
-      WHERE tv._id = ?
-    `);
-    const restOfIt = tv.all(item._id) as (TvTable & TvFileIdsTable & TvMediaServersTable & TvEpisodeIdsTable)[];
+
+    const mediaServersStmt = db.query(`SELECT * FROM tv_media_servers WHERE _id = ?`);
+    const mediaServers = mediaServersStmt.all(item._id) as TvMediaServersTable[];
 
     return new _TvDbEntry({
       _id: item._id,
-      fileId: restOfIt[0].fileId,
-      oldFileIds: restOfIt.map(i => i.fileId),
-      episodeIds: restOfIt.map(i => i.episodeId),
-      dataPath: restOfIt[0].dataPath,
-      mediaServers: Object.fromEntries(restOfIt.map(i => [i.mediaServerPath, i.path]))
+      fileId: item.fileId,
+      episodeIds: items.map(i => i.episodeId),
+      dataPath: item.dataPath,
+      mediaServers: Object.fromEntries(mediaServers.map(i => [i.mediaServerPath, i.path]))
     });
   }
 
   static async findExistingRecord(episodeId: number, fileId: number): Promise<DBEntry | null> {
-    const [byEpisodeId, byFileId] = await Promise.all([
-      _TvDbEntry.findByEpisodeId(episodeId),
-      _TvDbEntry.findByFileId(fileId)
-    ]);
-    if (!byEpisodeId && !byFileId) {
-      return null;
-    }
-    if (byEpisodeId && byFileId) {
-      if (byEpisodeId._id !== byFileId._id) {
+    const stmt = db.query(`SELECT * FROM tv WHERE episodeId = ? OR fileId = ?`);
+    const items = stmt.all(episodeId, fileId) as TvTable[];
+    if (items.length > 1) {
+      let firstId = items[0]._id;
+      if (items.some(i => i._id !== firstId)) {
         console.warn(`Found multiple entries that match the episodeId ${episodeId} or fileId ${fileId}`);
       }
-      return byEpisodeId;
     }
 
-    return byEpisodeId || byFileId;
+    return new _TvDbEntry({
+      _id: items[0]._id,
+      fileId: items[0].fileId,
+      episodeIds: items.map(i => i.episodeId),
+      dataPath: items[0].dataPath,
+      mediaServers: {}
+    });
   }
 
   static async loadEpisodeResource(episode: EpisodeResource): Promise<DBEntry> {
@@ -213,7 +168,6 @@ class _TvDbEntry extends DBEntry {
       record = new _TvDbEntry({
         _id: `tv-${episode.id}`,
         fileId: episode.episodeFileId,
-        oldFileIds: [],
         dataPath: episode.episodeFile?.path || undefined,
         episodeIds: [episode.id],
         mediaServers: {}

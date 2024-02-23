@@ -52,7 +52,10 @@ export default class EmbyMediaServer extends MediaServer {
     let abs = ''
 
     if (episode.length > 1) {
-      num = `E${episodeResource.episodeNumber.toString().padStart(2, '0')}-E${episode[episode.length - 1].episodeNumber.toString().padStart(2, '0')}`
+      // Ensure the episodes are sorted by episode number
+      episode = episode.sort((a, b) => a.episodeNumber - b.episodeNumber);
+
+      num = `E${episode[0].episodeNumber.toString().padStart(2, '0')}-E${episode[episode.length - 1].episodeNumber.toString().padStart(2, '0')}`
       if (episodeResource.absoluteEpisodeNumber && episode[episode.length - 1].absoluteEpisodeNumber)
         abs = `E${episodeResource.absoluteEpisodeNumber.toString().padStart(3, '0')}-E${episode[episode.length - 1].absoluteEpisodeNumber!.toString().padStart(3, '0')}`
       titleSection = episode.map(e => e.title).join(' + ')
