@@ -71,7 +71,7 @@ class DBEntry {
     
     // table tv: _id, fileId, dataPath -> upsert    
     for (const episodeId of this.episodeIds) {
-    db.exec(`INSERT INTO tv (_id, episodeId, fileId, dataPath) VALUES (?, ?, ?, ?) ON CONFLICT (_id, episodeId) DO UPDATE SET fileId = ?, dataPath = ?`, [this._id, episodeId, this._fileId!, this.dataPath || null, this._fileId!, this.dataPath || null]);
+      db.exec(`INSERT INTO tv (_id, episodeId, fileId, dataPath) VALUES (?, ?, ?, ?) ON CONFLICT (_id, episodeId) DO UPDATE SET fileId = ?, dataPath = ?`, [this._id, episodeId, this._fileId!, this.dataPath || null, this._fileId!, this.dataPath || null]);
     }
 
     // table tv_media_servers: _id, mediaServerPath, path -> batch upsert
@@ -96,6 +96,7 @@ class _TvDbEntry extends DBEntry {
     const stmt = db.query(`SELECT * FROM tv WHERE episodeId = ?`);
     const items = stmt.all(episodeId) as TvTable[];
 
+    if (items.length === 0) return null;
     if (items.length > 1) {
       console.warn(`Found multiple entries for episodeId ${episodeId}`);
     } else if (items.length === 0) {
@@ -123,6 +124,7 @@ class _TvDbEntry extends DBEntry {
     const stmt = db.query(`SELECT * FROM tv WHERE fileId = ?`);
     const items = stmt.all(fileId) as TvTable[];
     
+    if (items.length === 0) return null;
     if (items.length > 1) {
       console.warn(`Found multiple entries for fileId ${fileId}`);
     } else if (items.length === 0) {
@@ -146,6 +148,7 @@ class _TvDbEntry extends DBEntry {
   static async findExistingRecord(episodeId: number, fileId: number): Promise<DBEntry | null> {
     const stmt = db.query(`SELECT * FROM tv WHERE episodeId = ? OR fileId = ?`);
     const items = stmt.all(episodeId, fileId) as TvTable[];
+    if (items.length === 0) return null;
     if (items.length > 1) {
       let firstId = items[0]._id;
       if (items.some(i => i._id !== firstId)) {
